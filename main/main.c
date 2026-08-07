@@ -1,0 +1,47 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <inttypes.h>
+#include "driver/gpio.h"
+#include "esp_log.h"
+
+
+#define PIN_STEP 0
+#define PIN_DIR 1
+#define PIN_FAULTB 2
+#define PIN_SLEEPB 3
+#define PIN_ENABLE 4
+#define PIN_LED1 5
+#define PIN_LED2 6
+
+
+#define GPIO_OUTPUT_PIN_REG (1ULL<<PIN_STEP) | (1ULL<<PIN_DIR)          \
+  | (1ULL<<PIN_FAULTB) | (1ULL<<PIN_SLEEPB) | (1ULL<<PIN_ENABLE)        \
+  | (1ULL<<PIN_LED1) | (1ULL<<PIN_LED2)
+
+
+static const char *TAG = "ANDAMAN_DOSER";
+
+//https://github.com/espressif/esp-idf/blob/08e0d30a/components/esp_driver_gpio/include/driver/gpio.h
+void app_main(void){
+
+  const char *error_activelow[] = {"ERROR", "OK"};
+
+  gpio_config_t io_conf = {
+    .intr_type = GPIO_INTR_DISABLE,
+    .mode = GPIO_MODE_OUTPUT,
+    .pin_bit_mask = GPIO_OUTPUT_PIN_REG,
+    .pull_down_en = GPIO_PULLDOWN_DISABLE,
+    .pull_up_en = GPIO_PULLUP_DISABLE
+  };
+  gpio_config(&io_conf);
+
+  ESP_LOGI(TAG, "HAIII o/");
+
+  //wakeup driver
+  gpio_set_level(PIN_SLEEPB, 1);
+
+  ESP_LOGI(TAG, "driver started");
+  ESP_LOGI(TAG, "driver state: %s", error_activelow[gpio_get_level(PIN_FAULTB)]);
+
+}
