@@ -2,9 +2,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include "driver/gpio.h"
+#include <stdint.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_log.h"
-
+#include "driver/gpio.h"
 
 #define PIN_STEP 0
 #define PIN_DIR 1
@@ -21,12 +23,23 @@
 
 #define GPIO_INPUT_PIN_MASK (1ULL<<PIN_FAULTB)
 
+#define IOBUF_SIZE 512
 
 static const char *TAG = "ANDAMAN_DOSER";
+
+
+void step(void){
+  for(uint8_t i = 0; i < 10; i++){
+    gpio_set_level(PIN_STEP, 1);
+    vTaskDelay(pdMS_TO_TICKS(4));
+  }
+}
+
 
 //https://github.com/espressif/esp-idf/blob/08e0d30a/components/esp_driver_gpio/include/driver/gpio.h
 void app_main(void){
 
+  char iobuf[IOBUF_SIZE];
   const char *error_activelow[] = {"ERROR", "OK"};
 
   gpio_config_t output_io_conf = {
@@ -54,5 +67,15 @@ void app_main(void){
 
   ESP_LOGI(TAG, "driver started");
   ESP_LOGI(TAG, "driver state: %s", error_activelow[gpio_get_level(PIN_FAULTB)]);
+
+
+  if(fgets(iobuf, IOBUF_SIZE, stdin)){
+    printf("> %s\n", iobuf);
+    if(strcmp(iobuf, "step") == 0) step();
+    else printf("unrecognised command\n");
+  }else {
+
+  }
+
 
 }
