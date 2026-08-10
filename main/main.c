@@ -16,8 +16,10 @@
 
 
 #define GPIO_OUTPUT_PIN_REG (1ULL<<PIN_STEP) | (1ULL<<PIN_DIR)          \
-  | (1ULL<<PIN_FAULTB) | (1ULL<<PIN_SLEEPB) | (1ULL<<PIN_ENABLE)        \
+  |  (1ULL<<PIN_SLEEPB) | (1ULL<<PIN_ENABLE)                            \
   | (1ULL<<PIN_LED1) | (1ULL<<PIN_LED2)
+
+#define GPIO_INPUT_PIN_MASK (1ULL<<PIN_FAULTB)
 
 
 static const char *TAG = "ANDAMAN_DOSER";
@@ -27,14 +29,23 @@ void app_main(void){
 
   const char *error_activelow[] = {"ERROR", "OK"};
 
-  gpio_config_t io_conf = {
+  gpio_config_t output_io_conf = {
     .intr_type = GPIO_INTR_DISABLE,
     .mode = GPIO_MODE_OUTPUT,
     .pin_bit_mask = GPIO_OUTPUT_PIN_REG,
     .pull_down_en = GPIO_PULLDOWN_DISABLE,
     .pull_up_en = GPIO_PULLUP_DISABLE
   };
-  gpio_config(&io_conf);
+  gpio_config(&output_io_conf);
+
+  gpio_config_t input_io_conf = {
+    .intr_type = GPIO_INTR_DISABLE,
+    .mode = GPIO_MODE_INPUT,
+    .pin_bit_mask = GPIO_INPUT_PIN_MASK,
+    .pull_down_en = GPIO_PULLDOWN_DISABLE,
+    .pull_up_en = GPIO_PULLUP_ENABLE
+  };
+  gpio_config(&input_io_conf);
 
   ESP_LOGI(TAG, "HAIII o/");
 
