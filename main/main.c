@@ -24,7 +24,6 @@
 
 #define GPIO_INPUT_PIN_MASK (1ULL<<PIN_FAULTB)
 #define IOBUF_SIZE 512
-#define STEPS_PER_ML 2000
 
 
 static const char *TAG = "ANDAMAN_DOSER";
@@ -33,6 +32,7 @@ static const char *error_activelow[] = {"ERROR", "OK"};
 
 //https://github.com/espressif/esp-idf/blob/08e0d30a/components/esp_driver_gpio/include/driver/gpio.h
 void app_main(void){
+  step_struct pump_step_data = {0};
   char iobuf[IOBUF_SIZE];
   gpio_config_t output_io_conf = {
     .intr_type = GPIO_INTR_DISABLE,
@@ -64,12 +64,10 @@ void app_main(void){
   ESP_LOGI(TAG, "driver state: %s", error_activelow[gpio_get_level(PIN_FAULTB)]);
 
 
-  pump(2.5);
+  pump(1, &pump_step_data);
 
 
   ulTaskNotifyTake(pdTRUE, portMAX_DELAY);//wait for timer isr to finish
-
-  //vTaskDelay(2000/portTICK_PERIOD_MS);
 
   gpio_set_level(PIN_SLEEPB, 0);
   gpio_set_level(PIN_ENABLE, 0);
