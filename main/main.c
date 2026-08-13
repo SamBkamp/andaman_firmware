@@ -1,4 +1,4 @@
-]#include <stdio.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
@@ -97,7 +97,7 @@ void app_main(void){
   wifi_start();
 
 
-//  while(true){
+  while(true){
 //    if((sched.last_dose + sched.period_s) < time(&now)){
 //      //wakeup driver
 //      ESP_LOGI(TAG, "driver started");       
@@ -109,8 +109,8 @@ void app_main(void){
 //      gpio_set_level(PIN_LED2, 0);
 //      sched.last_dose = time(NULL);
 //    }
-//    vTaskDelay(pdMS_TO_TICKS(2000));
-//  }
+    vTaskDelay(pdMS_TO_TICKS(2000));
+  }
 
   
 }
