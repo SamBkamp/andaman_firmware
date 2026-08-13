@@ -31,6 +31,7 @@
 
 uint8_t wake_driver();
 uint8_t sleep_driver();
+void init_gpio_pins();
 
 static const char *TAG = "ANDAMAN_DOSER";
 static const char *error_activelow[] = {"ERROR", "OK"};
@@ -60,10 +61,55 @@ void app_main(void){
     .ml_per_dose = 2,
     .period_s = 60,
     .last_dose = 0
-  };  
-  
+  };
+
   step_struct pump_step_data = {0};
   char iobuf[IOBUF_SIZE];
+
+  init_gpio_pins();
+  set_sys_time();
+  wifi_start();
+
+  //setenv("TZ", "UTC+8", 1);
+  //tzset();
+
+  while(true){
+    if((sched.last_dose + sched.period_s) < time(&now)){
+      wake_driver();
+      gpio_set_level(PIN_LED2, 1);
+
+      pump(sched.ml_per_dose, &pump_step_data);
+      ulTaskNotifyTake(pdTRUE, portMAX_DELAY);//wait for timer isr to finish
+
+      sleep_driver();
+      gpio_set_level(PIN_LED2, 0);
+
+      sched.last_dose = time(NULL);
+    }
+    vTaskDelay(pdMS_TO_TICKS(2000));
+  }
+
+
+}
+
+
+uint8_t wake_driver(){
+  gpio_set_level(PIN_SLEEPB, 1);
+  gpio_set_level(PIN_ENABLE, 1);
+  vTaskDelay(pdMS_TO_TICKS(50)); //driver needs a little bit of time to startup
+  return gpio_get_level(PIN_FAULTB);
+}
+
+uint8_t sleep_driver(){
+  //driver sleep
+  gpio_set_level(PIN_SLEEPB, 0);
+  gpio_set_level(PIN_ENABLE, 0);
+  vTaskDelay(pdMS_TO_TICKS(50)); //driver needs a little bit of time to startup
+  return gpio_get_level(PIN_FAULTB);
+}
+
+
+void init_gpio_pins(){
   gpio_config_t output_io_conf = {
     .intr_type = GPIO_INTR_DISABLE,
     .mode = GPIO_MODE_OUTPUT,
@@ -81,52 +127,4 @@ void app_main(void){
     .pull_up_en = GPIO_PULLUP_ENABLE
   };
   gpio_config(&input_io_conf);
-
-  ESP_LOGI(TAG, "HAIII o/");
-
-  set_sys_time();
-  time(&now);
-  setenv("TZ", "UTC+8", 1);
-  tzset();
-
-  localtime_r(&now, &timeinfo);
-  strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-  ESP_LOGI(TAG, "The current date/time is: %s", strftime_buf);
-
-
-  wifi_start();
-
-
-  while(true){
-//    if((sched.last_dose + sched.period_s) < time(&now)){
-//      //wakeup driver
-//      ESP_LOGI(TAG, "driver started");       
-//      ESP_LOGI(TAG, "driver state: %s", error_activelow[wake_driver()]);
-//      gpio_set_level(PIN_LED2, 1);
-//      pump(sched.ml_per_dose, &pump_step_data);
-//      ulTaskNotifyTake(pdTRUE, portMAX_DELAY);//wait for timer isr to finish
-//      sleep_driver();
-//      gpio_set_level(PIN_LED2, 0);
-//      sched.last_dose = time(NULL);
-//    }
-    vTaskDelay(pdMS_TO_TICKS(2000));
-  }
-
-  
-}
-
-
-uint8_t wake_driver(){
-  gpio_set_level(PIN_SLEEPB, 1);
-  gpio_set_level(PIN_ENABLE, 1);
-  vTaskDelay(pdMS_TO_TICKS(50)); //driver needs a little bit of time to startup
-  return gpio_get_level(PIN_FAULTB);
-}
-
-uint8_t sleep_driver(){
-  //driver sleep
-  gpio_set_level(PIN_SLEEPB, 0);
-  gpio_set_level(PIN_ENABLE, 0);
-  vTaskDelay(pdMS_TO_TICKS(50)); //driver needs a little bit of time to startup
-  return gpio_get_level(PIN_FAULTB);
 }

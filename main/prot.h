@@ -34,4 +34,16 @@ typedef struct {
   time_t last_dose;
 }doser_schedule;
 
+
+//hardware state masks
+#define PC_WIFI_ACTIVE 1 << 0
+#define PC_BLE_ACTIVCE 1 << 1
+#define PC_TIMER_INIT 1 << 2
+#define PC_NVS_INIT 1 << 3
+
+typedef struct{
+  uint8_t hardware_states;
+  doser_schedule *schedule;
+}program_context;
+
 #endif
