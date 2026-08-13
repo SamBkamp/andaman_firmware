@@ -12,13 +12,15 @@
 #include <time.h>
 #include <sys/time.h>
 
-#include "esp_sntp.h"
 #include "esp_intr_alloc.h"
 #include "esp_attr.h"
 #include "driver/gptimer.h"
 #include "step_util.h"
 #include "wifi_driver.h"
+#include "ble_driver.h"
 #include "prot.h"
+#include "esp_sntp.h"
+#include "esp_netif_sntp.h"
 
 
 #define GPIO_OUTPUT_PIN_REG (1ULL<<PIN_STEP) | (1ULL<<PIN_DIR)          \
@@ -37,55 +39,58 @@ static const char *TAG = "ANDAMAN_DOSER";
 static const char *error_activelow[] = {"ERROR", "OK"};
 
 
-void set_sys_time(void){
-  struct tm tm;
-  tm.tm_year = 2026 - 1900;
-  tm.tm_mon = 7;
-  tm.tm_mday = 11;
-  tm.tm_hour = 9;
-  tm.tm_min = 33;
-  tm.tm_sec = 10;
-  //time_t t = mktime(&tm);
-  time_t t = 1786469970L;
-  //ESP_LOGI(TAG, "Setting time: %s", asctime(&tm));
-  struct timeval now = { .tv_sec = t };
-  settimeofday(&now, NULL);
+void update_sys_time(void){
+  esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+  esp_netif_sntp_init(&config);
+  ESP_ERROR_CHECK(esp_netif_sntp_sync_wait(pdMS_TO_TICKS(3000)));
+}
+
+void print_time(void){
+  time_t now;
+  char strftime_buf[64];
+  struct tm timeinfo;
+
+  time(&now);
+  setenv("TZ", "UTC+8", 1);
+  tzset();
+  localtime_r(&now, &timeinfo);
+  strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+  ESP_LOGI(TAG, "The current date/time in Hong Kong is: %s", strftime_buf);
+  
 }
 
 //https://github.com/espressif/esp-idf/blob/08e0d30a/components/esp_driver_gpio/include/driver/gpio.h
 void app_main(void){
-  time_t now;
-  char strftime_buf[64];
-  struct tm timeinfo;
   doser_schedule sched = {
     .ml_per_dose = 2,
     .period_s = 60,
     .last_dose = 0
   };
-
   step_struct pump_step_data = {0};
-  char iobuf[IOBUF_SIZE];
+
 
   init_gpio_pins();
-  set_sys_time();
-  wifi_start();
+  //wifi_start();
+  //update_sys_time();
+  //esp_wifi_disconnect();
+  //esp_wifi_stop();
+  ble_init();
+  
 
-  //setenv("TZ", "UTC+8", 1);
-  //tzset();
 
   while(true){
-    if((sched.last_dose + sched.period_s) < time(&now)){
-      wake_driver();
-      gpio_set_level(PIN_LED2, 1);
-
-      pump(sched.ml_per_dose, &pump_step_data);
-      ulTaskNotifyTake(pdTRUE, portMAX_DELAY);//wait for timer isr to finish
-
-      sleep_driver();
-      gpio_set_level(PIN_LED2, 0);
-
-      sched.last_dose = time(NULL);
-    }
+//    if((sched.last_dose + sched.period_s) < time(NULL)){
+//      wake_driver();
+//      gpio_set_level(PIN_LED2, 1);
+//
+//      pump(sched.ml_per_dose, &pump_step_data);
+//      ulTaskNotifyTake(pdTRUE, portMAX_DELAY);//wait for timer isr to finish
+//
+//      sleep_driver();
+//      gpio_set_level(PIN_LED2, 0);
+//
+//      sched.last_dose = time(NULL);
+//    }
     vTaskDelay(pdMS_TO_TICKS(2000));
   }
 
