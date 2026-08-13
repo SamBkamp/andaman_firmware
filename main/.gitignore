@@ -1,1 +1,3 @@
 build/**
+wifi_config.h
+main/wifi_config.h
