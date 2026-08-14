@@ -9,7 +9,8 @@
 
 #include "nvs_flash.h"
 
-#include "wifi_config.h"
+#include "wifi/wifi_config.h"
+#include "wifi/wifi_driver.h"
 
 //https://github.com/espressif/esp-idf/blob/v6.0.2/examples/wifi/getting_started/station/main/station_example_main.c
 

@@ -57,7 +57,7 @@ void timer_init_start (step_struct *user_data){
 void pump(float ml, step_struct *pump_step_data){
   pump_step_data->total_steps = (int)(ml*STEPS_PER_ML);
   pump_step_data->steps_achieved = 0;
-
+  wake_driver();
   if(pump_step_data->gptimer == NULL){//timer isn't initialised
     ESP_LOGI("DOSER", "timer not initisalised, initialising...");
     pump_step_data->callback_task = xTaskGetCurrentTaskHandle();
@@ -65,4 +65,6 @@ void pump(float ml, step_struct *pump_step_data){
   }
 
   ESP_ERROR_CHECK(gptimer_start(pump_step_data->gptimer));
+  ulTaskNotifyTake(pdTRUE, portMAX_DELAY);//wait for timer isr to finish
+  sleep_driver();
 }

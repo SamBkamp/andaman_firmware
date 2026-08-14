@@ -14,6 +14,13 @@
 #define PIN_LED1 5
 #define PIN_LED2 6
 
+#define GPIO_OUTPUT_PIN_REG (1ULL<<PIN_STEP) | (1ULL<<PIN_DIR)          \
+  |  (1ULL<<PIN_SLEEPB) | (1ULL<<PIN_ENABLE)                            \
+  | (1ULL<<PIN_LED1) | (1ULL<<PIN_LED2)
+
+#define GPIO_INPUT_PIN_MASK (1ULL<<PIN_FAULTB)
+#define IOBUF_SIZE 512
+
 
 #define SEC_PER_MIN 60
 #define SEC_PER_HR 3600

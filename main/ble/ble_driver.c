@@ -62,8 +62,9 @@ void ble_init(step_struct *pump_step_data){
     ret = nvs_flash_init();
   }
 
-  characteristics->arg = pump_step_data;
-  characteristics->arg = pump_step_data;
+  characteristics[0].arg = pump_step_data;
+  characteristics[1].arg = pump_step_data;
+  ESP_LOGI("BLE_INIT", "data: %d", pump_step_data->steps_achieved);
   
   ESP_ERROR_CHECK( ret );
 
@@ -102,8 +103,7 @@ int dose_char_callback(uint16_t conn_handle, uint16_t attr_handle, struct ble_ga
   data[len] = 0;
   mls = strtof((char *)data, NULL);
   ESP_LOGI(BLE_DEV_NAME, "GOT: %f", mls);
-  wake_driver();
   pump(mls, pump_step_data);
-  sleep_driver();
+  ESP_LOGI(BLE_DEV_NAME, "DONE");
   return 0;
 }
