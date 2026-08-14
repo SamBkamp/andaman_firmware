@@ -5,7 +5,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 
-#include "step_util.h"
+#include "stepper/step_util.h"
 #include "prot.h"
 
 #define STEPS_PER_ML 1900

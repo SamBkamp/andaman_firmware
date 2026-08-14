@@ -46,4 +46,7 @@ typedef struct{
   doser_schedule *schedule;
 }program_context;
 
+uint8_t wake_driver();
+uint8_t sleep_driver();
+
 #endif

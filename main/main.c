@@ -15,9 +15,9 @@
 #include "esp_intr_alloc.h"
 #include "esp_attr.h"
 #include "driver/gptimer.h"
-#include "step_util.h"
+#include "stepper/step_util.h"
 #include "wifi_driver.h"
-#include "ble_driver.h"
+#include "ble/ble_driver.h"
 #include "prot.h"
 #include "esp_sntp.h"
 #include "esp_netif_sntp.h"
@@ -56,7 +56,7 @@ void print_time(void){
   localtime_r(&now, &timeinfo);
   strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
   ESP_LOGI(TAG, "The current date/time in Hong Kong is: %s", strftime_buf);
-  
+
 }
 
 //https://github.com/espressif/esp-idf/blob/08e0d30a/components/esp_driver_gpio/include/driver/gpio.h
@@ -74,8 +74,8 @@ void app_main(void){
   //update_sys_time();
   //esp_wifi_disconnect();
   //esp_wifi_stop();
-  ble_init();
-  
+  ble_init(&pump_step_data);
+
 
 
   while(true){

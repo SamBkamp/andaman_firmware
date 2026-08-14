@@ -1,2 +1,2 @@
-#define WIFI_SSID "SSID_HERE"
-#define WIFI_PW "PW_HERE"
+#define WIFI_SSID "PB-new-network_24"
+#define WIFI_PW "nailik2003"
