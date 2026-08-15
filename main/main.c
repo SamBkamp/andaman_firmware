@@ -23,9 +23,6 @@
 #include "esp_netif_sntp.h"
 #include "generic_util.h"
 
-
-
-
 uint8_t wake_driver();
 uint8_t sleep_driver();
 void init_gpio_pins();
@@ -33,11 +30,10 @@ void init_gpio_pins();
 static const char *TAG = "ANDAMAN_DOSER";
 static const char *error_activelow[] = {"ERROR", "OK"};
 
-
 //https://github.com/espressif/esp-idf/blob/08e0d30a/components/esp_driver_gpio/include/driver/gpio.h
 void app_main(void){
   doser_schedule sched = {
-    .ml_per_dose = 2,
+    .ml_per_dose = 0,
     .period_s = 60,
     .last_dose = 0
   };
@@ -52,15 +48,15 @@ void app_main(void){
   ble_init(&ctx);
 
   while(true){
-//    if((sched.last_dose + sched.period_s) < time(NULL)){
-//      gpio_set_level(PIN_LED2, 1);
-//
-//      pump(sched.ml_per_dose, &pump_step_data);
-//
-//      gpio_set_level(PIN_LED2, 0);
-//
-//      sched.last_dose = time(NULL);
-//    }
+    if((sched.last_dose + sched.period_s) < time(NULL) && sched.ml_per_dose > 0){
+      gpio_set_level(PIN_LED2, 1);
+
+      pump(sched.ml_per_dose, &pump_step_data);
+
+      gpio_set_level(PIN_LED2, 0);
+
+      sched.last_dose = time(NULL);
+    }
     vTaskDelay(pdMS_TO_TICKS(2000));
   }
 
