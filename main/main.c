@@ -42,16 +42,14 @@ void app_main(void){
     .last_dose = 0
   };
   step_struct pump_step_data = {0};
-
+  program_context ctx = {
+    .hardware_states = 0,
+    .schedule = &sched,
+    .pump_step_data = &pump_step_data
+  };
 
   init_gpio_pins();
-  //wifi_start();
-  //update_sys_time();
-  //esp_wifi_disconnect();
-  //esp_wifi_stop();
-  ble_init(&pump_step_data);
-
-
+  ble_init(&ctx);
 
   while(true){
 //    if((sched.last_dose + sched.period_s) < time(NULL)){
@@ -68,6 +66,3 @@ void app_main(void){
 
 
 }
-
-
-

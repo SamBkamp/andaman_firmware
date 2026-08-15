@@ -6,7 +6,7 @@
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 
-void ble_init(step_struct *pump_step_data);
+void ble_init(program_context *ctx);
 
 
 #endif

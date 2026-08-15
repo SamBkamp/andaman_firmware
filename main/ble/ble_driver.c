@@ -33,7 +33,7 @@ static struct ble_gatt_chr_def characteristics[] = {
     .uuid = &status_characteristic_uuid.u,
     .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
     .access_cb = status_char_callback,
-  }, 
+  },
   {
     .uuid = &dosing_characteristic_uuid.u,
     .flags = BLE_GATT_CHR_F_WRITE,
@@ -55,24 +55,24 @@ static struct ble_gatt_svc_def gatt_service_definitions[] = {
 
 
 //only BLE entrypoint from the user, all other functions are called/registered here.
-void ble_init(step_struct *pump_step_data){
+void ble_init(program_context *ctx){
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
     ESP_ERROR_CHECK( nvs_flash_erase() );
     ret = nvs_flash_init();
   }
 
-  characteristics[0].arg = pump_step_data;
-  characteristics[1].arg = pump_step_data;
-  ESP_LOGI("BLE_INIT", "data: %d", pump_step_data->steps_achieved);
-  
+  characteristics[0].arg = ctx->pump_step_data;
+  characteristics[1].arg = ctx->pump_step_data;
+  ESP_LOGI("BLE_INIT", "data: %d", ctx->pump_step_data->steps_achieved);
+
   ESP_ERROR_CHECK( ret );
 
   nimble_port_init();
-  
+
   ESP_ERROR_CHECK(ble_gatts_count_cfg(gatt_service_definitions));
   ESP_ERROR_CHECK(ble_gatts_add_svcs(gatt_service_definitions));
-  
+
   ble_hs_cfg.reset_cb = ble_on_reset;
   ble_hs_cfg.sync_cb = ble_on_sync;
 
@@ -90,7 +90,7 @@ int status_char_callback(uint16_t conn_handle, uint16_t attr_handle, struct ble_
 int dose_char_callback(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
   step_struct *pump_step_data = (step_struct *)args;
   uint8_t data[32];
-  float mls; 
+  float mls;
   uint16_t len = OS_MBUF_PKTLEN(ctx->om);
 
   if(len > sizeof(data))

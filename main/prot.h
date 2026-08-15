@@ -51,6 +51,7 @@ typedef struct {
 typedef struct{
   uint8_t hardware_states;
   doser_schedule *schedule;
+  step_struct *pump_step_data;
 }program_context;
 
 uint8_t wake_driver();
