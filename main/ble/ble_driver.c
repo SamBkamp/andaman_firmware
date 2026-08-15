@@ -73,11 +73,6 @@ static struct ble_gatt_svc_def gatt_service_definitions[] = {
 
 //only BLE entrypoint from the user, all other functions are called/registered here.
 void ble_init(program_context *ctx){
-  esp_err_t ret = nvs_flash_init();
-  if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-    ESP_ERROR_CHECK( nvs_flash_erase() );
-    ret = nvs_flash_init();
-  }
 
   characteristics[0].arg = ctx;
   characteristics[1].arg = ctx->pump_step_data;

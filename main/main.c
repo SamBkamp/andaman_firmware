@@ -43,19 +43,25 @@ void app_main(void){
     .schedule = &sched,
     .pump_step_data = &pump_step_data
   };
+  esp_err_t nvs_ret = nvs_flash_init();
 
+
+  //init nvs
+  if (nvs_ret == ESP_ERR_NVS_NO_FREE_PAGES || nvs_ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    ESP_ERROR_CHECK(nvs_flash_erase());
+  
   init_gpio_pins();
   ble_init(&ctx);
 
   while(true){
     if((sched.last_dose + sched.period_s) < time(NULL) && sched.ml_per_dose > 0){
       gpio_set_level(PIN_LED2, 1);
+      sched.last_dose = time(NULL);
 
-      pump(sched.ml_per_dose, &pump_step_data);
+      pump(sched.ml_per_dose, &pump_step_data); //i think this blocks
 
       gpio_set_level(PIN_LED2, 0);
 
-      sched.last_dose = time(NULL);
     }
     vTaskDelay(pdMS_TO_TICKS(2000));
   }
