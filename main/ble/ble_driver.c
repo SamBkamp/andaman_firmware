@@ -20,6 +20,10 @@
 #include "ble_cb.h"
 #include "prot.h"
 
+#include "nvs.h"
+#include "nvs_flash.h"
+#include "nvs/nvs_driver.h"
+
 #define BLE_DEV_NAME "ADN-DOSER"
 #define BLE_ADV_INTVL 0.625
 
@@ -79,8 +83,6 @@ void ble_init(program_context *ctx){
   characteristics[2].arg = ctx;
   ESP_LOGI("BLE_INIT", "data: %d", ctx->pump_step_data->steps_achieved);
 
-  ESP_ERROR_CHECK( ret );
-
   nimble_port_init();
 
   ESP_ERROR_CHECK(ble_gatts_count_cfg(gatt_service_definitions));
@@ -122,7 +124,11 @@ int set_new_sched_callback(uint16_t conn_handle, uint16_t attr_handle, struct bl
   p_ctx->schedule->ml_per_dose = strtof(data, NULL);
   p_ctx->schedule->period_s = (uint16_t)strtol(post_ptr, NULL, 10);
   //BEWARE OF TRUNCATION: ULONG >= 32bits, period_s is 16 bits
-    
+
+  //commit new schedule to NVS
+
+  ESP_ERROR_CHECK(store_sched(p_ctx->schedule));
+  
   return 0;
 }
 

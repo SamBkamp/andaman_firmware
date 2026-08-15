@@ -22,6 +22,9 @@
 #include "esp_sntp.h"
 #include "esp_netif_sntp.h"
 #include "generic_util.h"
+#include "nvs.h"
+#include "nvs_flash.h"
+#include "nvs/nvs_driver.h"
 
 uint8_t wake_driver();
 uint8_t sleep_driver();
@@ -49,6 +52,20 @@ void app_main(void){
   //init nvs
   if (nvs_ret == ESP_ERR_NVS_NO_FREE_PAGES || nvs_ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
     ESP_ERROR_CHECK(nvs_flash_erase());
+
+  esp_err_t nvs_load_err = load_schedule(&sched);
+  
+  switch(nvs_load_err){
+  case ESP_ERR_NVS_NOT_FOUND:
+    ESP_LOGI(TAG, "no schedule found in NVS, storing default..");
+    store_sched(&sched);
+    break;
+  case ESP_OK:
+    break;
+  default:
+    ESP_ERROR_CHECK(nvs_load_err);
+    break; 
+  }
   
   init_gpio_pins();
   ble_init(&ctx);
