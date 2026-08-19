@@ -8,8 +8,6 @@
 #include "stepper/step_util.h"
 #include "prot.h"
 
-#define STEPS_PER_ML 1900
-
 static bool pump_alarm(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_ctx){
   step_struct *ss = (step_struct *)user_ctx;
   BaseType_t woken = pdFALSE;
@@ -21,7 +19,6 @@ static bool pump_alarm(gptimer_handle_t timer, const gptimer_alarm_event_data_t 
     gptimer_stop(timer);
     //gptimer_del_timer(timer);
     vTaskNotifyGiveFromISR(ss->callback_task, &woken);
-    //free(ss);
   }
 
   return woken == pdTRUE;
@@ -55,16 +52,19 @@ void timer_init_start (step_struct *user_data){
 
 
 void pump(float ml, step_struct *pump_step_data){
-  pump_step_data->total_steps = (int)(ml*STEPS_PER_ML);
+  pump_step_data->total_steps = (uint16_t)(ml*pump_step_data->steps_per_ml);
+  ESP_LOGI("DOSER", "TASK: %d STEPS", pump_step_data->total_steps);
+  ESP_LOGI("DOSER", "calibration data: %d", pump_step_data->steps_per_ml);
   pump_step_data->steps_achieved = 0;
   wake_driver();
   if(pump_step_data->gptimer == NULL){//timer isn't initialised
     ESP_LOGI("DOSER", "timer not initisalised, initialising...");
-    pump_step_data->callback_task = xTaskGetCurrentTaskHandle();
     timer_init_start(pump_step_data);
   }
 
+  pump_step_data->callback_task = xTaskGetCurrentTaskHandle();
   ESP_ERROR_CHECK(gptimer_start(pump_step_data->gptimer));
   ulTaskNotifyTake(pdTRUE, portMAX_DELAY);//wait for timer isr to finish
   sleep_driver();
+  ESP_LOGI("DOSER", "FINISHED TASK");
 }

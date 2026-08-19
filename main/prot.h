@@ -32,6 +32,7 @@ typedef struct {
   uint8_t state;
   TaskHandle_t callback_task;
   gptimer_handle_t gptimer;
+  uint16_t steps_per_ml;
 }step_struct;
 
 
@@ -51,7 +52,7 @@ typedef struct {
 typedef struct{
   uint8_t hardware_states;
   doser_schedule *schedule;
-  step_struct *pump_step_data;
+  step_struct *pump_step_data;  
 }program_context;
 
 uint8_t wake_driver();
