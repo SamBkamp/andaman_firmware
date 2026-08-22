@@ -48,6 +48,7 @@ typedef struct {
 #define PC_BLE_ACTIVCE 1 << 1
 #define PC_TIMER_INIT 1 << 2
 #define PC_NVS_INIT 1 << 3
+#define PC_STEP_DIRECTION 1 << 4
 
 typedef struct{
   uint8_t hardware_states;

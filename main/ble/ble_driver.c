@@ -19,6 +19,7 @@
 #include "stepper/step_util.h"
 #include "ble_cb.h"
 #include "prot.h"
+#include "driver/gpio.h"
 
 #include "nvs.h"
 #include "nvs_flash.h"
@@ -40,6 +41,7 @@ int set_new_sched_callback(uint16_t conn_handle, uint16_t attr_handle, struct bl
 int device_information(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
 int read_calibration_data(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
 int write_calibration_data(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
+int write_step_direction(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
 
 static const ble_uuid128_t doser_service_uuid = \
   BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52,0xac,0x40,0xa9,0x2f,0xb1,0x68,0x76,0x8b);
@@ -62,6 +64,9 @@ static const ble_uuid128_t calibration_info_uuid = \
 
 static const ble_uuid128_t write_calibration_uuid = \
   BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52, 0xCA,0x00, 0xa9,0x2f,0xb1,0x68,0x76,0x8b);
+
+static const ble_uuid128_t write_direction_uuid = \
+  BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52, 0xD1,0x4E, 0xa9,0x2f,0xb1,0x68,0x76,0x8b);
 
 static struct ble_gatt_chr_def characteristics[] = {
   {
@@ -94,6 +99,11 @@ static struct ble_gatt_chr_def characteristics[] = {
     .flags = BLE_GATT_CHR_F_WRITE,
     .access_cb = write_calibration_data,
   },
+  {
+    .uuid = &write_direction_uuid.u,
+    .flags = BLE_GATT_CHR_F_WRITE,
+    .access_cb = write_step_direction,
+  },
   {0}
 };
 
@@ -111,12 +121,14 @@ static struct ble_gatt_svc_def gatt_service_definitions[] = {
 //only BLE entrypoint from the user, all other functions are called/registered here.
 void ble_init(program_context *ctx){
   //this needs to be here because its evaluated at runtime
+  //make characteristics[1] take ctx and then loopify this
   characteristics[0].arg = ctx;
   characteristics[1].arg = ctx->pump_step_data;
   characteristics[2].arg = ctx;
   characteristics[3].arg = ctx;
   characteristics[4].arg = ctx;
   characteristics[5].arg = ctx;
+  characteristics[6].arg = ctx;
 
   nimble_port_init();
 
@@ -207,7 +219,7 @@ int write_calibration_data(uint16_t conn_handle, uint16_t attr_handle, struct bl
   program_context *p_ctx = (program_context *)args;
   uint16_t len = OS_MBUF_PKTLEN(ctx->om);
   char data[32];
-  
+
   if(len > sizeof(data)){
     ESP_LOGE("BLE", "PACKET_SIZE_WRONG");
     return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
@@ -217,19 +229,42 @@ int write_calibration_data(uint16_t conn_handle, uint16_t attr_handle, struct bl
   data[len] = 0;
 
   p_ctx->pump_step_data->steps_per_ml = (uint16_t)strtol(data, NULL, 10);
-  
+
   ESP_LOGI("BLE", "got %d", p_ctx->pump_step_data->steps_per_ml);
-  
+
   ESP_ERROR_CHECK(store_step_calibration(&p_ctx->pump_step_data->steps_per_ml));
   return 0;
 }
 
 int read_calibration_data(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
   program_context *p_ctx = (program_context *)args;
-  
+
   return os_mbuf_append(ctx->om,
                         &p_ctx->pump_step_data->steps_per_ml,
                         sizeof(p_ctx->pump_step_data->steps_per_ml))
     == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
   //sorry for this atrocious formatting
+}
+
+int write_step_direction(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
+  program_context *p_ctx = (program_context *)args;
+  uint16_t len = OS_MBUF_PKTLEN(ctx->om);
+  char data;
+
+  if(len > sizeof(data)){
+    ESP_LOGE("BLE", "PACKET_SIZE_WRONG");
+    return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+  }
+
+  ble_hs_mbuf_to_flat(ctx->om, &data, sizeof(data), NULL);
+
+  //we just want the LSB
+  data &= 1;
+  gpio_set_level(PIN_DIR, data);
+  data = data << PC_STEP_DIRECTION;
+  p_ctx->hardware_states = data;
+  ESP_LOGI("BLE", "hw states: %d", p_ctx->hardware_states);
+
+  return 0;
+
 }

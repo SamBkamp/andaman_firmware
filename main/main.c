@@ -56,6 +56,7 @@ void app_main(void){
 
   esp_err_t nvs_load_err = load_schedule(&sched);
   esp_err_t nvs_load_calib = load_step_calibration(&pump_step_data.steps_per_ml);
+  esp_err_t nvs_load_hardware_state = load_hardware_state(&ctx.hardware_states);
 
   switch(nvs_load_err){
   case ESP_ERR_NVS_NOT_FOUND:
@@ -82,12 +83,24 @@ void app_main(void){
     break;
   }
 
+  switch(nvs_load_hardware_state){
+  case ESP_ERR_NVS_NOT_FOUND:
+    ESP_LOGI(TAG, "no hardware state found in NVS, storing default..");
+    store_hardware_state(&ctx.hardware_states);
+    break;
+  case ESP_OK:
+    break;
+  default:
+    ESP_ERROR_CHECK(nvs_load_err);
+    break;
+  }
 
-  pump_step_data.steps_per_ml = DEFAULT_STEP_CALIBRATION;
-  store_step_calibration(&pump_step_data.steps_per_ml);
 
   init_gpio_pins();
   ble_init(&ctx);
+
+  //set stepper direction
+  gpio_set_level(PIN_DIR, (ctx.hardware_states & PC_STEP_DIRECTION)>>PC_STEP_DIRECTION);
 
   while(true){
     if((sched.last_dose + sched.period_s) < time(NULL) && sched.ml_per_dose > 0){
