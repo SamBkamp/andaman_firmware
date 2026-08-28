@@ -7,6 +7,10 @@
 #include "driver/gpio.h"
 #include <stdint.h>
 #include "esp_netif_sntp.h"
+#include "esp_err.h"
+#include "nvs.h"
+#include "nvs_flash.h"
+#include "nvs/nvs_driver.h"
 
 static const char *TAG = "ANDAMAN_DOSER";
 static const char *error_activelow[] = {"ERROR", "OK"};
@@ -31,6 +35,59 @@ void print_time(void){
 
 }
 
+
+esp_err_t load_data_from_nvs(doser_schedule *sched,
+                             step_struct *pump_step_data,
+                             uint8_t *hardware_states){
+
+  esp_err_t nvs_load_err = load_schedule(sched);
+
+  switch(nvs_load_err){
+  case ESP_ERR_NVS_NOT_FOUND:
+    ESP_LOGI(TAG, "no schedule found in NVS, storing default..");
+    store_sched(sched);
+    break;
+  case ESP_OK:
+    break;
+  default:
+    ESP_ERROR_CHECK(nvs_load_err);
+    return nvs_load_err;
+    break;
+  }
+
+  esp_err_t nvs_load_calib = load_step_calibration(&pump_step_data->steps_per_ml);
+
+  switch(nvs_load_calib){
+  case ESP_ERR_NVS_NOT_FOUND:
+    ESP_LOGI(TAG, "no calibration data found in NVS, storing default..");
+    pump_step_data->steps_per_ml = DEFAULT_STEP_CALIBRATION;
+    store_step_calibration(&pump_step_data->steps_per_ml);
+    break;
+  case ESP_OK:
+    break;
+  default:
+    ESP_ERROR_CHECK(nvs_load_err);
+    return nvs_load_err;
+    break;
+  }
+
+  esp_err_t nvs_load_hardware_state = load_hardware_state(hardware_states);
+
+  switch(nvs_load_hardware_state){
+  case ESP_ERR_NVS_NOT_FOUND:
+    ESP_LOGI(TAG, "no hardware state found in NVS, storing default..");
+    store_hardware_state(hardware_states);
+    break;
+  case ESP_OK:
+    break;
+  default:
+    ESP_ERROR_CHECK(nvs_load_err);
+    return nvs_load_err;
+    break;
+  }
+
+  return ESP_OK;
+}
 
 uint8_t wake_driver(){
   gpio_set_level(PIN_SLEEPB, 1);

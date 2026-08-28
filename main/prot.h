@@ -24,7 +24,10 @@
 
 #define SEC_PER_MIN 60
 #define SEC_PER_HR 3600
-#define AD_HOUR_TO_SECS(secs) secs * SEC_PER_HR
+#define AD_HOUR_TO_SECS(hrs) hrs * SEC_PER_HR
+
+#define MAX_DOSE_TIMEPOINTS 20
+#define DEFAULT_STEP_CALIBRATION 2000
 
 typedef struct {
   uint16_t total_steps;
@@ -43,6 +46,17 @@ typedef struct {
 }doser_schedule;
 
 
+typedef struct{
+  uint8_t hour;
+  uint8_t minute;
+  float ml;
+}dose_time_data_t;
+
+typedef struct {
+  uint8_t time_points;
+  dose_time_data_t times[MAX_DOSE_TIMEPOINTS];
+}doser_time_schedule;
+
 //hardware state masks
 #define PC_WIFI_ACTIVE 1 << 0
 #define PC_BLE_ACTIVCE 1 << 1
@@ -53,7 +67,7 @@ typedef struct {
 typedef struct{
   uint8_t hardware_states;
   doser_schedule *schedule;
-  step_struct *pump_step_data;  
+  step_struct *pump_step_data;
 }program_context;
 
 uint8_t wake_driver();
