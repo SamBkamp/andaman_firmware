@@ -28,7 +28,7 @@ void timer_init_start (step_struct *user_data){
   gptimer_config_t timer_config = {
     .clk_src = GPTIMER_CLK_SRC_DEFAULT, // Select the default clock source
     .direction = GPTIMER_COUNT_UP,      // Counting direction is up
-    .resolution_hz = 1 * 1000 * 1000,   // Resolution is 1 MHz, i.e., 1 tick equals 1 microsecond
+    .resolution_hz = 1 * 1000 * 1000 * 2,   // Resolution is 1 MHz, i.e., 1 tick equals 1 microsecond
   };
 
   ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &user_data->gptimer));
