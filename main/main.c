@@ -68,7 +68,7 @@ void app_main(void){
   ble_init(&ctx);
 
   //set stepper direction
-  gpio_set_level(PIN_DIR, (ctx.hardware_states & PC_STEP_DIRECTION)>>PC_STEP_DIRECTION);
+  gpio_set_level(PIN_DIR, (ctx.hardware_states & PC_STEP_DIRECTION)>>PC_STEP_DIRECTION_PIN);
 
   ESP_LOGI(TAG, "last dose: %d | next dose: %d", sched.last_dose, (sched.last_dose + sched.period_s));
 

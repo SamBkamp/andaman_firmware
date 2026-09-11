@@ -261,9 +261,11 @@ int write_step_direction(uint16_t conn_handle, uint16_t attr_handle, struct ble_
   //we just want the LSB
   data &= 1;
   gpio_set_level(PIN_DIR, data);
-  data = data << PC_STEP_DIRECTION;
-  p_ctx->hardware_states = data;
+  data = data << PC_STEP_DIRECTION_PIN;
+  p_ctx->hardware_states &= ~(PC_STEP_DIRECTION); //clear dir bit
+  p_ctx->hardware_states |= data;
   ESP_LOGI("BLE", "hw states: %d", p_ctx->hardware_states);
+  ESP_ERROR_CHECK(store_hardware_state(&(p_ctx->hardware_states)));
 
   return 0;
 

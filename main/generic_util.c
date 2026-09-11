@@ -37,7 +37,8 @@ void print_time(void){
 
 }
 
-
+//loads data using the load() function, if the blob doesn't exist, itll store default data
+//using the store() function with the def_val argument
 esp_err_t load_or_default(nvs_load_cb load, nvs_store_cb store, void* data, void* def_val){
 
   esp_err_t nvs_load_err = load(data);
