@@ -10,7 +10,8 @@
 #define NVS_KEY_HWSTATE "hw_state"
 
 
-esp_err_t store_sched(doser_schedule *sched){
+esp_err_t store_sched(void *schedule){
+  doser_schedule *sched = (doser_schedule *)schedule;
   nvs_handle_t handle;
   esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
 
@@ -26,22 +27,24 @@ esp_err_t store_sched(doser_schedule *sched){
   return err;
 }
 
-esp_err_t load_schedule(doser_schedule *sched){
-    nvs_handle_t handle;
-    size_t size = sizeof(doser_schedule);
+esp_err_t load_schedule(void *schedule){
+  doser_schedule *sched = (doser_schedule *)schedule;
+  nvs_handle_t handle;
+  size_t size = sizeof(doser_schedule);
 
-    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &handle);
+  esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &handle);
 
-    if (err != ESP_OK)
-      return err;
-
-    err = nvs_get_blob(handle, NVS_KEY_SCHEDULE, sched, &size);
-    nvs_close(handle);
-
+  if (err != ESP_OK)
     return err;
+
+  err = nvs_get_blob(handle, NVS_KEY_SCHEDULE, sched, &size);
+  nvs_close(handle);
+
+  return err;
 }
 
-esp_err_t load_step_calibration(uint16_t *steps_per_ml){
+esp_err_t load_step_calibration(void *steps){
+  uint16_t *steps_per_ml = (uint16_t *)steps;
   nvs_handle_t handle;
   size_t size = sizeof(steps_per_ml);
 
@@ -57,7 +60,8 @@ esp_err_t load_step_calibration(uint16_t *steps_per_ml){
 }
 
 
-esp_err_t store_step_calibration(uint16_t *steps_per_ml){
+esp_err_t store_step_calibration(void *steps){
+  uint16_t *steps_per_ml = (uint16_t *)steps;
   nvs_handle_t handle;
   esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
 
@@ -73,7 +77,8 @@ esp_err_t store_step_calibration(uint16_t *steps_per_ml){
   return err;
 }
 
-esp_err_t load_hardware_state(uint8_t *hardware_state){
+esp_err_t load_hardware_state(void *hws){
+  uint8_t *hardware_state = (uint8_t *)hws;
   nvs_handle_t handle;
   size_t size = sizeof(*hardware_state);
 
@@ -90,7 +95,8 @@ esp_err_t load_hardware_state(uint8_t *hardware_state){
 }
 
 
-esp_err_t store_hardware_state(uint8_t *hardware_state){
+esp_err_t store_hardware_state(void *hws){
+  uint8_t *hardware_state = (uint8_t *)hws;
   nvs_handle_t handle;
   esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
 

@@ -15,6 +15,8 @@
 static const char *TAG = "ANDAMAN_DOSER";
 static const char *error_activelow[] = {"ERROR", "OK"};
 
+
+
 void update_sys_time(void){
   esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
   esp_netif_sntp_init(&config);
@@ -36,47 +38,14 @@ void print_time(void){
 }
 
 
-esp_err_t load_data_from_nvs(doser_schedule *sched,
-                             step_struct *pump_step_data,
-                             uint8_t *hardware_states){
+esp_err_t load_or_default(nvs_load_cb load, nvs_store_cb store, void* data, void* def_val){
 
-  esp_err_t nvs_load_err = load_schedule(sched);
+  esp_err_t nvs_load_err = load(data);
 
   switch(nvs_load_err){
   case ESP_ERR_NVS_NOT_FOUND:
-    ESP_LOGI(TAG, "no schedule found in NVS, storing default..");
-    store_sched(sched);
-    break;
-  case ESP_OK:
-    break;
-  default:
-    ESP_ERROR_CHECK(nvs_load_err);
-    return nvs_load_err;
-    break;
-  }
-
-  esp_err_t nvs_load_calib = load_step_calibration(&pump_step_data->steps_per_ml);
-
-  switch(nvs_load_calib){
-  case ESP_ERR_NVS_NOT_FOUND:
-    ESP_LOGI(TAG, "no calibration data found in NVS, storing default..");
-    pump_step_data->steps_per_ml = DEFAULT_STEP_CALIBRATION;
-    store_step_calibration(&pump_step_data->steps_per_ml);
-    break;
-  case ESP_OK:
-    break;
-  default:
-    ESP_ERROR_CHECK(nvs_load_err);
-    return nvs_load_err;
-    break;
-  }
-
-  esp_err_t nvs_load_hardware_state = load_hardware_state(hardware_states);
-
-  switch(nvs_load_hardware_state){
-  case ESP_ERR_NVS_NOT_FOUND:
-    ESP_LOGI(TAG, "no hardware state found in NVS, storing default..");
-    store_hardware_state(hardware_states);
+    ESP_LOGI(TAG, "no NWS data found for param, storing default...");
+    store(def_val);
     break;
   case ESP_OK:
     break;
@@ -88,6 +57,7 @@ esp_err_t load_data_from_nvs(doser_schedule *sched,
 
   return ESP_OK;
 }
+
 
 uint8_t wake_driver(){
   gpio_set_level(PIN_SLEEPB, 1);

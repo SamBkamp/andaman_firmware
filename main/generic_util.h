@@ -7,11 +7,14 @@
 #include "prot.h"
 #include <stdint.h>
 
+typedef esp_err_t (*nvs_load_cb)(void *data);
+typedef esp_err_t (*nvs_store_cb)(void *data);
+
 void update_sys_time(void);
 void print_time(void);
 uint8_t wake_driver();
 uint8_t sleep_driver();
 void init_gpio_pins();
-esp_err_t load_data_from_nvs(doser_schedule *sched, step_struct *pump_step_data, uint8_t *hardware_states);
+esp_err_t load_or_default(nvs_load_cb load, nvs_store_cb store, void* data, void* def_val);
 
 #endif
