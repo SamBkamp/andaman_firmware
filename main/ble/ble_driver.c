@@ -159,7 +159,7 @@ int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
 int read_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
   program_context *p_ctx = (program_context *)args;
   char data[32];
-  int len = snprintf(data, 32, "dosing %.3f every %d seconds", p_ctx->schedule->ml_per_dose, p_ctx->schedule->period_s);
+  int len = snprintf(data, 32, "%.3f,%d", p_ctx->schedule->ml_per_dose, p_ctx->schedule->period_s);
 
   return os_mbuf_append(ctx->om, data, len) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 }
