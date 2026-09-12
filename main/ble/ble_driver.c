@@ -33,8 +33,8 @@ typedef struct{
   uint8_t v[3];
 }version;
 
-static const version SOFTWARE_VERSION = {.v = {0,0,1}};
-static const version BOARD_VERSION = {.v = {0,0,1}};
+static const version SOFTWARE_VERSION = {.v = {1,0,1}};
+static const version BOARD_VERSION = {.v = {1,0,1}};
 
 int schedule_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
 int manual_dose(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
