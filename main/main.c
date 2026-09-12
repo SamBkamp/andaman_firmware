@@ -48,19 +48,19 @@ void app_main(void){
     .schedule = &sched,
     .pump_step_data = &pump_step_data
   };
-  esp_err_t nvs_ret = nvs_flash_init();
+
 
   //init nvs
-  if (nvs_ret == ESP_ERR_NVS_NO_FREE_PAGES || nvs_ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
-    ESP_ERROR_CHECK(nvs_flash_erase());
+  esp_err_t nvs_ret = nvs_flash_init();
+
+  /* if (nvs_ret == ESP_ERR_NVS_NO_FREE_PAGES || nvs_ret == ESP_ERR_NVS_NEW_VERSION_FOUND) */
+  /*   ESP_ERROR_CHECK(nvs_flash_erase()); */
 
 
   //load initialisation data from NVS
   load_or_default(load_schedule, store_sched, &sched, &sched);
   load_or_default(load_step_calibration, store_step_calibration, &pump_step_data.steps_per_ml, &pump_step_data.steps_per_ml);
   load_or_default(load_hardware_state, store_hardware_state, &ctx.hardware_states, &ctx.hardware_states);
-
-
 
   sched.last_dose = 0; //so the schedule starts executing from now. Time independant as we might not have a a good time source on each boot
 
@@ -69,8 +69,6 @@ void app_main(void){
 
   //set stepper direction
   gpio_set_level(PIN_DIR, (ctx.hardware_states & PC_STEP_DIRECTION)>>PC_STEP_DIRECTION_PIN);
-
-  ESP_LOGI(TAG, "last dose: %d | next dose: %d", sched.last_dose, (sched.last_dose + sched.period_s));
 
   while(true){
     if((sched.last_dose + sched.period_s) < time(NULL) && sched.ml_per_dose > 0){

@@ -35,13 +35,11 @@ typedef struct{
 static const version SOFTWARE_VERSION = {.v = {0,0,1}};
 static const version BOARD_VERSION = {.v = {0,0,1}};
 
-int status_char_callback(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
+int schedule_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
 int dose_char_callback(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
-int set_new_sched_callback(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
 int device_information(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
-int read_calibration_data(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
-int write_calibration_data(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
 int write_step_direction(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
+int calibration_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void *args);
 
 static const ble_uuid128_t doser_service_uuid = \
   BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52,0xac,0x40,0xa9,0x2f,0xb1,0x68,0x76,0x8b);
@@ -50,39 +48,28 @@ static const ble_uuid128_t doser_service_uuid = \
 static const ble_uuid128_t dosing_characteristic_uuid = \
   BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52, 0xD0,0x5E, 0xa9,0x2f,0xb1,0x68,0x76,0x8b);
 
-static const ble_uuid128_t status_characteristic_uuid =\
-  BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52, 0x57,0x87, 0xa9,0x2f,0xb1,0x68,0x76,0x8b);
-
-static const ble_uuid128_t sched_characteristic_uuid = \
+static const ble_uuid128_t schedule_characteristic_uuid = \
   BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52, 0x5C,0xED, 0xa9,0x2f,0xb1,0x68,0x76,0x8b);
 
 static const ble_uuid128_t device_info_uuid = \
   BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52, 0x13,0xF0, 0xa9,0x2f,0xb1,0x68,0x76,0x8b);
 
-static const ble_uuid128_t calibration_info_uuid = \
+static const ble_uuid128_t calibration_const_uuid = \
   BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52, 0xCA,0x1B, 0xa9,0x2f,0xb1,0x68,0x76,0x8b);
-
-static const ble_uuid128_t write_calibration_uuid = \
-  BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52, 0xCA,0x00, 0xa9,0x2f,0xb1,0x68,0x76,0x8b);
 
 static const ble_uuid128_t write_direction_uuid = \
   BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52, 0xD1,0x4E, 0xa9,0x2f,0xb1,0x68,0x76,0x8b);
 
 static struct ble_gatt_chr_def characteristics[] = {
   {
-    .uuid = &status_characteristic_uuid.u,
-    .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
-    .access_cb = status_char_callback,
-  },
-  {
     .uuid = &dosing_characteristic_uuid.u,
     .flags = BLE_GATT_CHR_F_WRITE,
     .access_cb = dose_char_callback,
   },
   {
-    .uuid = &sched_characteristic_uuid.u,
-    .flags = BLE_GATT_CHR_F_WRITE,
-    .access_cb = set_new_sched_callback,
+    .uuid = &schedule_characteristic_uuid.u,
+    .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_READ,
+    .access_cb = schedule_handler,
   },
   {
     .uuid = &device_info_uuid.u,
@@ -90,14 +77,9 @@ static struct ble_gatt_chr_def characteristics[] = {
     .access_cb = device_information,
   },
   {
-    .uuid = &calibration_info_uuid.u,
-    .flags = BLE_GATT_CHR_F_READ,
-    .access_cb = read_calibration_data,
-  },
-  {
-    .uuid = &write_calibration_uuid.u,
-    .flags = BLE_GATT_CHR_F_WRITE,
-    .access_cb = write_calibration_data,
+    .uuid = &calibration_const_uuid.u,
+    .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE,
+    .access_cb = calibration_handler,
   },
   {
     .uuid = &write_direction_uuid.u,
@@ -123,12 +105,10 @@ void ble_init(program_context *ctx){
   //this needs to be here because its evaluated at runtime
   //make characteristics[1] take ctx and then loopify this
   characteristics[0].arg = ctx;
-  characteristics[1].arg = ctx->pump_step_data;
+  characteristics[1].arg = ctx;
   characteristics[2].arg = ctx;
   characteristics[3].arg = ctx;
   characteristics[4].arg = ctx;
-  characteristics[5].arg = ctx;
-  characteristics[6].arg = ctx;
 
   nimble_port_init();
 
@@ -146,7 +126,7 @@ void ble_init(program_context *ctx){
 }
 
 
-int set_new_sched_callback(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
+int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
   program_context *p_ctx = (program_context *)args;
   char data[32];
   float mls_per_dose = 0;
@@ -176,7 +156,7 @@ int set_new_sched_callback(uint16_t conn_handle, uint16_t attr_handle, struct bl
   return 0;
 }
 
-int status_char_callback(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
+int read_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
   program_context *p_ctx = (program_context *)args;
   char data[32];
   int len = snprintf(data, 32, "dosing %.3f every %d seconds", p_ctx->schedule->ml_per_dose, p_ctx->schedule->period_s);
@@ -215,7 +195,7 @@ int dose_char_callback(uint16_t conn_handle, uint16_t attr_handle, struct ble_ga
   return 0;
 }
 
-int write_calibration_data(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
+int write_calibration_data(struct ble_gatt_access_ctxt *ctx, void *args){
   program_context *p_ctx = (program_context *)args;
   uint16_t len = OS_MBUF_PKTLEN(ctx->om);
   char data[32];
@@ -236,7 +216,7 @@ int write_calibration_data(uint16_t conn_handle, uint16_t attr_handle, struct bl
   return 0;
 }
 
-int read_calibration_data(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
+int read_calibration_data(struct ble_gatt_access_ctxt *ctx, void* args){
   program_context *p_ctx = (program_context *)args;
 
   return os_mbuf_append(ctx->om,
@@ -245,6 +225,46 @@ int read_calibration_data(uint16_t conn_handle, uint16_t attr_handle, struct ble
     == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
   //sorry for this atrocious formatting
 }
+
+
+int calibration_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void *args){
+  switch (ctx->op) {
+
+  case BLE_GATT_ACCESS_OP_READ_CHR:
+    return read_schedule(ctx, args);
+    break;
+
+  case BLE_GATT_ACCESS_OP_WRITE_CHR:
+    return set_schedule(ctx, args);
+    break;
+
+  default:
+    return BLE_ATT_ERR_UNLIKELY;
+  }
+
+  return 0;
+}
+
+
+
+int schedule_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void *args){
+  switch (ctx->op) {
+
+  case BLE_GATT_ACCESS_OP_READ_CHR:
+    return read_calibration_data(ctx, args);
+    break;
+
+  case BLE_GATT_ACCESS_OP_WRITE_CHR:
+    return write_calibration_data(ctx, args);
+    break;
+
+  default:
+    return BLE_ATT_ERR_UNLIKELY;
+  }
+
+  return 0;
+}
+
 
 int write_step_direction(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
   program_context *p_ctx = (program_context *)args;
