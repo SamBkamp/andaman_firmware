@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 #include "esp_log.h"
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
@@ -36,7 +37,7 @@ static const version SOFTWARE_VERSION = {.v = {0,0,1}};
 static const version BOARD_VERSION = {.v = {0,0,1}};
 
 int schedule_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
-int dose_char_callback(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
+int manual_dose(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
 int device_information(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
 int write_step_direction(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
 int calibration_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void *args);
@@ -64,7 +65,7 @@ static struct ble_gatt_chr_def characteristics[] = {
   {
     .uuid = &dosing_characteristic_uuid.u,
     .flags = BLE_GATT_CHR_F_WRITE,
-    .access_cb = dose_char_callback,
+    .access_cb = manual_dose,
   },
   {
     .uuid = &schedule_characteristic_uuid.u,
@@ -146,9 +147,13 @@ int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
   data[i++] = 0; //set the comma to a 0 and increment postfix
   post_ptr = &data[i]; //ptr now points to first char in substr after comma
 
-  p_ctx->schedule->ml_per_dose = strtof(data, NULL);
-  p_ctx->schedule->period_s = (uint16_t)strtol(post_ptr, NULL, 10);
   //BEWARE OF TRUNCATION: ULONG >= 32bits, period_s is 16 bits
+  uint16_t new_period = (uint16_t)strtol(post_ptr, NULL, 10);
+  if(new_period < 1)
+    return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+
+  p_ctx->schedule->ml_per_dose = strtof(data, NULL);
+  p_ctx->schedule->period_s = new_period;
 
   //commit new schedule to NVS
   ESP_ERROR_CHECK(store_sched(p_ctx->schedule));
@@ -176,7 +181,7 @@ int device_information(uint16_t conn_handle, uint16_t attr_handle, struct ble_ga
   return os_mbuf_append(ctx->om, data, sizeof(version)*2) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 }
 
-int dose_char_callback(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
+int manual_dose(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
   step_struct *pump_step_data = (step_struct *)args;
   uint8_t data[32];
   float mls;
@@ -191,6 +196,10 @@ int dose_char_callback(uint16_t conn_handle, uint16_t attr_handle, struct ble_ga
                                NULL);
   data[len] = 0;
   mls = strtof((char *)data, NULL);
+
+  if(mls == 0 || mls == ERANGE)
+    return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+
   pump(mls, pump_step_data);
   return 0;
 }
