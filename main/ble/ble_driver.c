@@ -39,7 +39,7 @@ static const version BOARD_VERSION = {.v = {0,0,1}};
 int schedule_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
 int manual_dose(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
 int device_information(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
-int write_step_direction(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
+int step_direction_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
 int calibration_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void *args);
 
 static const ble_uuid128_t doser_service_uuid = \
@@ -84,8 +84,8 @@ static struct ble_gatt_chr_def characteristics[] = {
   },
   {
     .uuid = &write_direction_uuid.u,
-    .flags = BLE_GATT_CHR_F_WRITE,
-    .access_cb = write_step_direction,
+    .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_READ,
+    .access_cb = step_direction_handler,
   },
   {0}
 };
@@ -182,7 +182,7 @@ int device_information(uint16_t conn_handle, uint16_t attr_handle, struct ble_ga
 }
 
 int manual_dose(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
-  step_struct *pump_step_data = (step_struct *)args;
+  program_context *p_ctx = (program_context *)args;
   uint8_t data[32];
   float mls;
   uint16_t len = OS_MBUF_PKTLEN(ctx->om);
@@ -200,7 +200,7 @@ int manual_dose(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_acce
   if(mls == 0 || mls == ERANGE)
     return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
 
-  pump(mls, pump_step_data);
+  pump(mls, p_ctx->pump_step_data);
   return 0;
 }
 
@@ -240,26 +240,6 @@ int calibration_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_g
   switch (ctx->op) {
 
   case BLE_GATT_ACCESS_OP_READ_CHR:
-    return read_schedule(ctx, args);
-    break;
-
-  case BLE_GATT_ACCESS_OP_WRITE_CHR:
-    return set_schedule(ctx, args);
-    break;
-
-  default:
-    return BLE_ATT_ERR_UNLIKELY;
-  }
-
-  return 0;
-}
-
-
-
-int schedule_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void *args){
-  switch (ctx->op) {
-
-  case BLE_GATT_ACCESS_OP_READ_CHR:
     return read_calibration_data(ctx, args);
     break;
 
@@ -275,7 +255,28 @@ int schedule_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt
 }
 
 
-int write_step_direction(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
+
+int schedule_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void *args){
+
+  switch (ctx->op) {
+
+  case BLE_GATT_ACCESS_OP_READ_CHR:
+    return read_schedule(ctx, args);
+    break;
+
+  case BLE_GATT_ACCESS_OP_WRITE_CHR:
+    return set_schedule(ctx, args);
+    break;
+
+  default:
+    return BLE_ATT_ERR_UNLIKELY;
+  }
+
+  return 0;
+}
+
+
+int write_step_direction(struct ble_gatt_access_ctxt *ctx, void* args){
   program_context *p_ctx = (program_context *)args;
   uint16_t len = OS_MBUF_PKTLEN(ctx->om);
   char data;
@@ -298,4 +299,44 @@ int write_step_direction(uint16_t conn_handle, uint16_t attr_handle, struct ble_
 
   return 0;
 
+}
+
+
+int read_step_direction(struct ble_gatt_access_ctxt *ctx, void *args){
+
+  program_context *p_ctx = (program_context *)args;
+  char data[32];
+  int len;
+
+  switch(p_ctx->hardware_states & PC_STEP_DIRECTION){
+  case PC_STEP_DIRECTION:
+    len = snprintf(data, 32, "CCW");
+    break;
+  default:
+    len = snprintf(data, 32, "CW");
+    break;
+  }
+
+  return os_mbuf_append(ctx->om, data, len) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+
+
+}
+
+int step_direction_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
+
+  switch (ctx->op) {
+
+  case BLE_GATT_ACCESS_OP_READ_CHR:
+    return read_step_direction(ctx, args);
+    break;
+
+  case BLE_GATT_ACCESS_OP_WRITE_CHR:
+    return write_step_direction(ctx, args);
+    break;
+
+  default:
+    return BLE_ATT_ERR_UNLIKELY;
+  }
+
+  return 0;
 }
