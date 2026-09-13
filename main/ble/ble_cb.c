@@ -1,6 +1,7 @@
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
 
+#include "prot.h"
 #include "ble_cb.h"
 #include "esp_nimble_hci.h"
 #include "services/gap/ble_svc_gap.h"
@@ -8,54 +9,234 @@
 #include "host/ble_hs.h"
 #include "host/ble_gap.h"
 
+#include "nvs.h"
+#include "nvs_flash.h"
+#include "nvs/nvs_driver.h"
+#include "stepper/step_util.h"
+
+#include "driver/gpio.h"
+
+#include <string.h>
+#include <errno.h>
+
 
 #define BLE_DEV_NAME "ADN-DOSER"
 #define BLE_ADV_INTVL 0.625
 
-void advertising(void){
-  struct ble_gap_adv_params adv_params = {0};
-  struct ble_hs_adv_fields adv_fields = {0};
-
-  adv_fields.name = (uint8_t *)BLE_DEV_NAME;
-  adv_fields.name_len = sizeof(BLE_DEV_NAME);
-  adv_fields.name_is_complete = 1;
-
-  ble_gap_adv_set_fields(&adv_fields);
+static const version SOFTWARE_VERSION = {.v = {1,0,1}};
+static const version BOARD_VERSION = {.v = {1,0,1}};
 
 
-  adv_params.conn_mode = BLE_GAP_CONN_MODE_UND;
-  adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN;
-  adv_params.itvl_min = (unsigned int)(500/BLE_ADV_INTVL); //converts and rounds down to closest published adv interval
-  adv_params.itvl_max = (unsigned int)(500/BLE_ADV_INTVL); //converts and rounds down to closest published adv interval
+int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
+  program_context *p_ctx = (program_context *)args;
+  char data[32];
+  float mls_per_dose = 0;
+  uint16_t period = 0;
+  uint16_t len = OS_MBUF_PKTLEN(ctx->om);
 
-  ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, BLE_HS_FOREVER, &adv_params, gap_event, NULL);
+  if(len > sizeof(data))
+    return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+
+  ble_hs_mbuf_to_flat(ctx->om, data, sizeof(data), NULL);
+  data[len] = 0;
+
+  char *post_ptr = data;
+  uint8_t i = 0;
+  for(; data[i] != 0 && data[i] != ','; i++){}
+
+  data[i++] = 0; //set the comma to a 0 and increment postfix
+  post_ptr = &data[i]; //ptr now points to first char in substr after comma
+
+  //BEWARE OF TRUNCATION: ULONG >= 32bits, period_s is 16 bits
+  uint16_t new_period = (uint16_t)strtol(post_ptr, NULL, 10);
+  if(new_period < 1)
+    return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+
+  p_ctx->schedule->ml_per_dose = strtof(data, NULL);
+  p_ctx->schedule->period_s = new_period;
+
+  //commit new schedule to NVS
+  ESP_ERROR_CHECK(store_sched(p_ctx->schedule));
+
+  return 0;
+}
+
+int read_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
+  program_context *p_ctx = (program_context *)args;
+  char data[32];
+  int len = snprintf(data, 32, "%.3f,%d", p_ctx->schedule->ml_per_dose, p_ctx->schedule->period_s);
+
+  return os_mbuf_append(ctx->om, data, len) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+}
+
+int device_information(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
+  char data[32];
+  data[0] = SOFTWARE_VERSION.v[0];
+  data[1] = SOFTWARE_VERSION.v[1];
+  data[2] = SOFTWARE_VERSION.v[2];
+  data[3] = BOARD_VERSION.v[0];
+  data[4] = BOARD_VERSION.v[1];
+  data[5] = BOARD_VERSION.v[2];
+
+  return os_mbuf_append(ctx->om, data, sizeof(version)*2) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+}
+
+int manual_dose(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
+  program_context *p_ctx = (program_context *)args;
+  uint8_t data[32];
+  float mls;
+  uint16_t len = OS_MBUF_PKTLEN(ctx->om);
+
+  if(len > sizeof(data))
+    return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+
+  int rc = ble_hs_mbuf_to_flat(ctx->om,
+                               data,
+                               sizeof(data),
+                               NULL);
+  data[len] = 0;
+  mls = strtof((char *)data, NULL);
+
+  if(mls == 0 || mls == ERANGE)
+    return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
+
+  pump(mls, p_ctx->pump_step_data);
+  return 0;
+}
+
+int write_calibration_data(struct ble_gatt_access_ctxt *ctx, void *args){
+  program_context *p_ctx = (program_context *)args;
+  uint16_t len = OS_MBUF_PKTLEN(ctx->om);
+  char data[32];
+
+  if(len > sizeof(data)){
+    ESP_LOGE("BLE", "PACKET_SIZE_WRONG");
+    return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+  }
+
+  ble_hs_mbuf_to_flat(ctx->om, data, sizeof(data), NULL);
+  data[len] = 0;
+
+  p_ctx->pump_step_data->steps_per_ml = (uint16_t)strtol(data, NULL, 10);
+
+  ESP_LOGI("BLE", "got %d", p_ctx->pump_step_data->steps_per_ml);
+
+  ESP_ERROR_CHECK(store_step_calibration(&p_ctx->pump_step_data->steps_per_ml));
+  return 0;
+}
+
+int read_calibration_data(struct ble_gatt_access_ctxt *ctx, void* args){
+  program_context *p_ctx = (program_context *)args;
+
+  return os_mbuf_append(ctx->om,
+                        &p_ctx->pump_step_data->steps_per_ml,
+                        sizeof(p_ctx->pump_step_data->steps_per_ml))
+    == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+  //sorry for this atrocious formatting
+}
+
+
+int calibration_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void *args){
+  switch (ctx->op) {
+
+  case BLE_GATT_ACCESS_OP_READ_CHR:
+    return read_calibration_data(ctx, args);
+    break;
+
+  case BLE_GATT_ACCESS_OP_WRITE_CHR:
+    return write_calibration_data(ctx, args);
+    break;
+
+  default:
+    return BLE_ATT_ERR_UNLIKELY;
+  }
+
+  return 0;
+}
+
+
+
+int schedule_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void *args){
+
+  switch (ctx->op) {
+
+  case BLE_GATT_ACCESS_OP_READ_CHR:
+    return read_schedule(ctx, args);
+    break;
+
+  case BLE_GATT_ACCESS_OP_WRITE_CHR:
+    return set_schedule(ctx, args);
+    break;
+
+  default:
+    return BLE_ATT_ERR_UNLIKELY;
+  }
+
+  return 0;
+}
+
+
+int write_step_direction(struct ble_gatt_access_ctxt *ctx, void* args){
+  program_context *p_ctx = (program_context *)args;
+  uint16_t len = OS_MBUF_PKTLEN(ctx->om);
+  char data;
+
+  if(len > sizeof(data)){
+    ESP_LOGE("BLE", "PACKET_SIZE_WRONG");
+    return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+  }
+
+  ble_hs_mbuf_to_flat(ctx->om, &data, sizeof(data), NULL);
+
+  //we just want the LSB
+  data &= 1;
+  gpio_set_level(PIN_DIR, data);
+  data = data << PC_STEP_DIRECTION_PIN;
+  p_ctx->hardware_states &= ~(PC_STEP_DIRECTION); //clear dir bit
+  p_ctx->hardware_states |= data;
+  ESP_LOGI("BLE", "hw states: %d", p_ctx->hardware_states);
+  ESP_ERROR_CHECK(store_hardware_state(&(p_ctx->hardware_states)));
+
+  return 0;
 
 }
 
 
-int gap_event(struct ble_gap_event *event, void *arg){
-  switch(event->type){
-  case BLE_GAP_EVENT_CONNECT:
-    if (event->connect.status == 0) ESP_LOGI("AD_BLE", "Client connected");
-    else{
-      ESP_LOGI("AD_BLE", "Connection failed: %d", event->connect.status);
-      // Start advertising again
-      advertising();
-    }
-    break;
-  case BLE_GAP_EVENT_DISCONNECT:
-    ESP_LOGI("AD_BLE", "Client disconnected");
+int read_step_direction(struct ble_gatt_access_ctxt *ctx, void *args){
 
-    // Start advertising again so another client can connect
-    advertising();
-    break;
-  case BLE_GAP_EVENT_ADV_COMPLETE:
-    ESP_LOGI("AD_BLE", "Advertising complete");
+  program_context *p_ctx = (program_context *)args;
+  char data[32];
+  int len;
 
-    // Usually restart advertising if you want to remain discoverable
-    advertising();
+  switch(p_ctx->hardware_states & PC_STEP_DIRECTION){
+  case PC_STEP_DIRECTION:
+    len = snprintf(data, 32, "CCW");
+    break;
   default:
+    len = snprintf(data, 32, "CW");
     break;
   }
+
+  return os_mbuf_append(ctx->om, data, len) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+
+
+}
+
+int step_direction_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
+
+  switch (ctx->op) {
+
+  case BLE_GATT_ACCESS_OP_READ_CHR:
+    return read_step_direction(ctx, args);
+    break;
+
+  case BLE_GATT_ACCESS_OP_WRITE_CHR:
+    return write_step_direction(ctx, args);
+    break;
+
+  default:
+    return BLE_ATT_ERR_UNLIKELY;
+  }
+
   return 0;
 }

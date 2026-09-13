@@ -1,12 +1,42 @@
 #ifndef BLE_CB_H
 #define BLE_CB_H
 
+#include "prot.h"
 #include "host/ble_hs.h"
 #include "host/ble_gap.h"
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 
-int gap_event(struct ble_gap_event *event, void *arg);
-void advertising(void);
+typedef struct{
+  uint8_t v[3];
+}version;
+
+
+static const ble_uuid128_t doser_service_uuid = \
+  BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52,0xac,0x40,0xa9,0x2f,0xb1,0x68,0x76,0x8b);
+
+//                                                          VVVVVVVVV  characteristic identifier
+static const ble_uuid128_t dosing_characteristic_uuid = \
+  BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52, 0xD0,0x5E, 0xa9,0x2f,0xb1,0x68,0x76,0x8b);
+
+static const ble_uuid128_t schedule_characteristic_uuid = \
+  BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52, 0x5C,0xED, 0xa9,0x2f,0xb1,0x68,0x76,0x8b);
+
+static const ble_uuid128_t device_info_uuid = \
+  BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52, 0x13,0xF0, 0xa9,0x2f,0xb1,0x68,0x76,0x8b);
+
+static const ble_uuid128_t calibration_const_uuid = \
+  BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52, 0xCA,0x1B, 0xa9,0x2f,0xb1,0x68,0x76,0x8b);
+
+static const ble_uuid128_t write_direction_uuid = \
+  BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52, 0xD1,0x4E, 0xa9,0x2f,0xb1,0x68,0x76,0x8b);
+
+
+int schedule_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
+int manual_dose(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
+int device_information(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
+int step_direction_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
+int calibration_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void *args);
+
 
 #endif

@@ -11,4 +11,10 @@ void ble_on_sync(void);
 void ble_on_reset(int reason);
 void nimble_host_run_task(void *params);
 
+
+int gap_event(struct ble_gap_event *event, void *arg);
+void advertising(char *device_name);
+
+
+
 #endif
