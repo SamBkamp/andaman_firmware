@@ -46,7 +46,8 @@ void app_main(void){
   program_context ctx = {
     .hardware_states = 0,
     .schedule = &sched,
-    .pump_step_data = &pump_step_data
+    .pump_step_data = &pump_step_data,
+    .BLE_device_name = "ADN-Doser"
   };
 
 

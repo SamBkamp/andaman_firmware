@@ -76,6 +76,7 @@ typedef struct{
   uint8_t hardware_states;
   doser_schedule *schedule;
   step_struct *pump_step_data;
+  char BLE_device_name[30];
 }program_context;
 
 uint8_t wake_driver();

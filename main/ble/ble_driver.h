@@ -7,6 +7,8 @@
 #include "services/gatt/ble_svc_gatt.h"
 
 void ble_init(program_context *ctx);
-
+void ble_on_sync(void);
+void ble_on_reset(int reason);
+void nimble_host_run_task(void *params);
 
 #endif

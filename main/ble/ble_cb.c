@@ -12,7 +12,7 @@
 #define BLE_DEV_NAME "ADN-DOSER"
 #define BLE_ADV_INTVL 0.625
 
-static void advertising(void){
+void advertising(void){
   struct ble_gap_adv_params adv_params = {0};
   struct ble_hs_adv_fields adv_fields = {0};
 
@@ -58,18 +58,4 @@ int gap_event(struct ble_gap_event *event, void *arg){
     break;
   }
   return 0;
-}
-
-void ble_on_sync(void){
-  ESP_LOGI("AD_BLE", "BLE host sync'd");
-  advertising();
-}
-void ble_on_reset(int reason){
-  ESP_LOGI("AD_BLE", "BLE host reset (%d)", reason);
-}
-
-void nimble_host_run_task(void *params){
-  nimble_port_run();
-  nimble_port_freertos_deinit();
-  vTaskDelete(NULL);
 }

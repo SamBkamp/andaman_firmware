@@ -101,6 +101,23 @@ static struct ble_gatt_svc_def gatt_service_definitions[] = {
 };
 
 
+
+void ble_on_sync(void){
+  ESP_LOGI("AD_BLE", "BLE host sync'd");
+  advertising();
+}
+void ble_on_reset(int reason){
+  ESP_LOGI("AD_BLE", "BLE host reset (%d)", reason);
+}
+
+void nimble_host_run_task(void *params){
+  nimble_port_run();
+  nimble_port_freertos_deinit();
+  vTaskDelete(NULL);
+}
+
+
+
 //only BLE entrypoint from the user, all other functions are called/registered here.
 void ble_init(program_context *ctx){
   //this needs to be here because its evaluated at runtime
