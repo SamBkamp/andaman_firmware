@@ -245,7 +245,7 @@ int step_direction_handler(uint16_t conn_handle, uint16_t attr_handle, struct bl
 int new_ble_dev_name(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
   program_context *p_ctx = (program_context *)args;
   uint16_t len = OS_MBUF_PKTLEN(ctx->om);
-  char data[29];
+  char data[BLE_MAX_DEVNAME_LEN-1];
 
   if(len > sizeof(data)){
     ESP_LOGE("BLE", "PACKET_SIZE_WRONG");
