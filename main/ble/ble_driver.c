@@ -92,17 +92,13 @@ void nimble_host_run_task(void *params){
   vTaskDelete(NULL);
 }
 
-
-
 //only BLE entrypoint from the user, all other functions are called/registered here.
 void ble_init(program_context *ctx){
   //this needs to be here because its evaluated at runtime
   //make characteristics[1] take ctx and then loopify this
-  characteristics[0].arg = ctx;
-  characteristics[1].arg = ctx;
-  characteristics[2].arg = ctx;
-  characteristics[3].arg = ctx;
-  characteristics[4].arg = ctx;
+  for(uint8_t i = 0; characteristics[i].uuid != 0; i++){
+    characteristics[i].arg = ctx;
+  }
 
   BLE_device_name = ctx->BLE_device_name;
 
