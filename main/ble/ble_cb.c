@@ -255,5 +255,9 @@ int new_ble_dev_name(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt
   ble_hs_mbuf_to_flat(ctx->om, data, sizeof(data), NULL);
   data[len] = 0;
 
+  ESP_ERROR_CHECK(store_device_name((void *)data));
+  strcpy(p_ctx->BLE_device_name, data);
+
+
   return 0;
 }
