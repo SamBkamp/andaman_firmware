@@ -24,7 +24,7 @@
 #define BLE_ADV_INTVL 0.625
 
 static const version SOFTWARE_VERSION = {.v = {1,0,1}};
-static const version BOARD_VERSION = {.v = {1,0,1}};
+static const version BOARD_VERSION = {.v = {0,0,1}};
 
 
 int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){

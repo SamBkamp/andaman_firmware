@@ -64,6 +64,8 @@ void app_main(void){
   load_or_default(load_hardware_state, store_hardware_state, &ctx.hardware_states, &ctx.hardware_states);
   load_or_default(load_device_name, store_device_name, &ctx.BLE_device_name, &ctx.BLE_device_name);
 
+  ESP_LOGI(TAG, "Device name: %s", ctx.BLE_device_name);
+
   sched.last_dose = 0; //so the schedule starts executing from now. Time independant as we might not have a a good time source on each boot
 
   init_gpio_pins();
