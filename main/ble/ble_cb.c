@@ -240,3 +240,20 @@ int step_direction_handler(uint16_t conn_handle, uint16_t attr_handle, struct bl
 
   return 0;
 }
+
+
+int new_ble_dev_name(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
+  program_context *p_ctx = (program_context *)args;
+  uint16_t len = OS_MBUF_PKTLEN(ctx->om);
+  char data[29];
+
+  if(len > sizeof(data)){
+    ESP_LOGE("BLE", "PACKET_SIZE_WRONG");
+    return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+  }
+
+  ble_hs_mbuf_to_flat(ctx->om, data, sizeof(data), NULL);
+  data[len] = 0;
+
+  return 0;
+}

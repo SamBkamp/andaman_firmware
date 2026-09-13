@@ -21,6 +21,7 @@
 #define GPIO_INPUT_PIN_MASK (1ULL<<PIN_FAULTB)
 #define IOBUF_SIZE 512
 
+#define BLE_MAX_DEVNAME_LEN 30
 
 #define SEC_PER_MIN 60
 #define SEC_PER_HR 3600
@@ -76,7 +77,7 @@ typedef struct{
   uint8_t hardware_states;
   doser_schedule *schedule;
   step_struct *pump_step_data;
-  char BLE_device_name[30];
+  char BLE_device_name[BLE_MAX_DEVNAME_LEN];
 }program_context;
 
 uint8_t wake_driver();

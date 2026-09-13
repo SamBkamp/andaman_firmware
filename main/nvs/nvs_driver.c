@@ -8,6 +8,7 @@
 #define NVS_KEY_SCHEDULE "doser_sched"
 #define NVS_KEY_CALIBRATION "calibration"
 #define NVS_KEY_HWSTATE "hw_state"
+#define NVS_KEY_DEVNAME "device_name"
 
 
 esp_err_t store_sched(void *schedule){
@@ -104,6 +105,39 @@ esp_err_t store_hardware_state(void *hws){
     return err;
 
   err = nvs_set_blob(handle, NVS_KEY_HWSTATE, hardware_state, sizeof(*hardware_state));
+  if(err == ESP_OK)
+    err = nvs_commit(handle);
+
+  nvs_close(handle);
+
+  return err;
+}
+
+
+esp_err_t load_device_name(void *name){
+  char *device_name = (char *)name;
+  nvs_handle_t handle;
+  esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
+  uint size = BLE_MAX_DEVNAME_LEN; //get blob wants a pointer for some reason
+
+  if(err != ESP_OK)
+    return err;
+
+  err = nvs_get_blob(handle, NVS_KEY_DEVNAME, name, &size);
+  nvs_close(handle);
+
+  return err;
+}
+
+esp_err_t store_device_name(void *name){
+  char *device_name = (char *)name;
+  nvs_handle_t handle;
+  esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
+
+  if(err != ESP_OK)
+    return err;
+
+  err = nvs_set_blob(handle, NVS_KEY_DEVNAME, name, BLE_MAX_DEVNAME_LEN);
   if(err == ESP_OK)
     err = nvs_commit(handle);
 

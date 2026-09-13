@@ -62,6 +62,7 @@ void app_main(void){
   load_or_default(load_schedule, store_sched, &sched, &sched);
   load_or_default(load_step_calibration, store_step_calibration, &pump_step_data.steps_per_ml, &pump_step_data.steps_per_ml);
   load_or_default(load_hardware_state, store_hardware_state, &ctx.hardware_states, &ctx.hardware_states);
+  load_or_default(load_device_name, store_device_name, &ctx.BLE_device_name, &ctx.BLE_device_name);
 
   sched.last_dose = 0; //so the schedule starts executing from now. Time independant as we might not have a a good time source on each boot
 
