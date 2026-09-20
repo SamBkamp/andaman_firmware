@@ -13,6 +13,8 @@
 #define PIN_ENABLE 4
 #define PIN_LED1 5
 #define PIN_LED2 6
+#define PIN_LED_ERROR PIN_LED1
+#define PIN_LED_GEN PIN_LED2
 
 #define GPIO_OUTPUT_PIN_REG (1ULL<<PIN_STEP) | (1ULL<<PIN_DIR)          \
   |  (1ULL<<PIN_SLEEPB) | (1ULL<<PIN_ENABLE)                            \

@@ -73,6 +73,9 @@ void app_main(void){
 
   //set stepper direction
   gpio_set_level(PIN_DIR, (ctx.hardware_states & PC_STEP_DIRECTION)>>PC_STEP_DIRECTION_PIN);
+  gpio_set_level(PIN_LED_GEN, 1);
+  gpio_set_level(PIN_LED_ERROR, gpio_get_level(PIN_FAULTB) ^ 1);
+  //pin_faultb is active low, so we invert it - LED will only be on when fault is low
 
   while(true){
     if((sched.last_dose + sched.period_s) < time(NULL) && sched.ml_per_dose > 0){

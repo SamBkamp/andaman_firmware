@@ -261,3 +261,30 @@ int new_ble_dev_name(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt
 
   return 0;
 }
+
+
+int auto_cal_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
+  program_context *p_ctx = (program_context *)args;
+  uint16_t len = OS_MBUF_PKTLEN(ctx->om);
+  char data[9]; //this allows for 10.xxxxx precision
+  float actual_output;
+
+  if(len > sizeof(data)){
+    ESP_LOGE("BLE", "PACKET_SIZE_WRONG");
+    return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+  }
+
+  ble_hs_mbuf_to_flat(ctx->om, data, sizeof(data), NULL);
+  data[len] = 0;
+
+  actual_output = strtof(data, NULL);
+
+  float calibration_correction_mult = 1+((10 - actual_output)/10);
+  p_ctx->pump_step_data->steps_per_ml *= calibration_correction_mult;
+
+  ESP_LOGI("AD_BLE", "multiplier: %f, new_val %d", calibration_correction_mult, p_ctx->pump_step_data->steps_per_ml);
+
+  ESP_ERROR_CHECK(store_sched(p_ctx->schedule));
+
+  return 0;
+}
