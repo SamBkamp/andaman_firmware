@@ -9,6 +9,7 @@
 #define NVS_KEY_CALIBRATION "calibration"
 #define NVS_KEY_HWSTATE "hw_state"
 #define NVS_KEY_DEVNAME "device_name"
+#define NVS_KEY_TOTAL_DOSED "total_dosed"
 
 
 esp_err_t store_sched(void *schedule){
@@ -138,6 +139,39 @@ esp_err_t store_device_name(void *name){
     return err;
 
   err = nvs_set_blob(handle, NVS_KEY_DEVNAME, name, BLE_MAX_DEVNAME_LEN);
+  if(err == ESP_OK)
+    err = nvs_commit(handle);
+
+  nvs_close(handle);
+
+  return err;
+}
+
+
+esp_err_t load_total_dosed(void *dosed){
+  double *dosed_amount = (double *)dosed;
+  nvs_handle_t handle;
+  esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
+  size_t size = sizeof(double);
+
+  if(err != ESP_OK)
+    return err;
+
+  err = nvs_get_blob(handle, NVS_KEY_TOTAL_DOSED, dosed_amount, &size);
+  nvs_close(handle);
+
+  return err;
+}
+
+esp_err_t store_total_dosed(void *dosed){
+  double *dosed_amount = (double *)dosed;
+  nvs_handle_t handle;
+  esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
+
+  if(err != ESP_OK)
+    return err;
+
+  err = nvs_set_blob(handle, NVS_KEY_TOTAL_DOSED, dosed_amount, sizeof(double));
   if(err == ESP_OK)
     err = nvs_commit(handle);
 

@@ -47,7 +47,8 @@ void app_main(void){
     .hardware_states = 0,
     .schedule = &sched,
     .pump_step_data = &pump_step_data,
-    .BLE_device_name = "ADN-Doser"
+    .BLE_device_name = "ADN-Doser",
+    .total_amount_dosed = 0
   };
 
 

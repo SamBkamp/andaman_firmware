@@ -49,12 +49,14 @@ typedef struct {
 }doser_schedule;
 
 
+//still yet to be implemented
 typedef struct{
   uint8_t hour;
   uint8_t minute;
   float ml;
 }dose_time_data_t;
 
+//same with this
 typedef struct {
   uint8_t time_points;
   dose_time_data_t times[MAX_DOSE_TIMEPOINTS];
@@ -80,6 +82,7 @@ typedef struct{
   doser_schedule *schedule;
   step_struct *pump_step_data;
   char BLE_device_name[BLE_MAX_DEVNAME_LEN];
+  double total_amount_dosed;
 }program_context;
 
 uint8_t wake_driver();
