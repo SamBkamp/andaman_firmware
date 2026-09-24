@@ -65,13 +65,15 @@ void deregister_pump(void *arg){
   ulTaskNotifyTake(pdTRUE, portMAX_DELAY);//wait for timer isr to finish
   sleep_driver();
   ESP_LOGI("DOSER", "driver sleep");
-
+  ss->total_steps = 0; //reset total steps when done
   vTaskDelete(NULL);
 }
 
 
 
 void pump(float ml, step_struct *pump_step_data){
+  if(pump_step_data->total_steps != 0) return; //pumping in progress
+
   pump_step_data->total_steps = (uint32_t)(ml*pump_step_data->steps_per_ml);
   pump_step_data->steps_achieved = 0;
   pump_step_data->state = 0;
