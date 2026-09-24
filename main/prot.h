@@ -33,8 +33,8 @@
 #define DEFAULT_STEP_CALIBRATION 2000
 
 typedef struct {
-  uint16_t total_steps;
-  uint16_t steps_achieved;
+  uint32_t total_steps;
+  uint32_t steps_achieved;
   uint8_t state;
   TaskHandle_t callback_task;
   gptimer_handle_t gptimer;
