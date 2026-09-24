@@ -20,13 +20,12 @@ static bool pump_alarm(gptimer_handle_t timer, const gptimer_alarm_event_data_t 
   /*               ss->state, */
   /*               gpio_get_level(PIN_STEP) */
   /*               ); */
-  //ESP_LOGI("erm", "state: %d", gpio_get_level(PIN_STEP));
   if(ss->steps_achieved >= ss->total_steps) {
     gptimer_stop(timer);
     vTaskNotifyGiveFromISR(ss->callback_task, &woken);
   }
 
-  //gpio_set_level(PIN_LED_ERROR, gpio_get_level(PIN_FAULTB) ^ 1);
+  gpio_set_level(PIN_LED_ERROR, gpio_get_level(PIN_FAULTB) ^ 1);
   //pin_faultb is active low, so we invert it - LED will only be on when fault is low
 
 
@@ -60,6 +59,18 @@ void timer_init_start (step_struct *user_data){
 }
 
 
+
+void deregister_pump(void *arg){
+  step_struct *ss = (step_struct *)arg;
+  ulTaskNotifyTake(pdTRUE, portMAX_DELAY);//wait for timer isr to finish
+  sleep_driver();
+  ESP_LOGI("DOSER", "driver sleep");
+
+  vTaskDelete(NULL);
+}
+
+
+
 void pump(float ml, step_struct *pump_step_data){
   pump_step_data->total_steps = (uint32_t)(ml*pump_step_data->steps_per_ml);
   pump_step_data->steps_achieved = 0;
@@ -71,9 +82,11 @@ void pump(float ml, step_struct *pump_step_data){
     timer_init_start(pump_step_data);
   }
 
-  pump_step_data->callback_task = xTaskGetCurrentTaskHandle();
+  xTaskCreate(deregister_pump, "pump_completed", 2048,
+              pump_step_data, 5, &pump_step_data->callback_task);
+
+  //pump_step_data->callback_task = xTaskGetCurrentTaskHandle();
   ESP_ERROR_CHECK(gptimer_start(pump_step_data->gptimer));
-  ulTaskNotifyTake(pdTRUE, portMAX_DELAY);//wait for timer isr to finish
-  sleep_driver();
-  ESP_LOGI("DOSER", "driver sleep");
+
+
 }
