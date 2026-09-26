@@ -32,6 +32,10 @@
 #define MAX_DOSE_TIMEPOINTS 20
 #define DEFAULT_STEP_CALIBRATION 2000
 
+typedef enum {
+  DISCRETE, CONTINUOUS
+} pump_mode_t;
+
 typedef struct {
   uint32_t total_steps;
   uint32_t steps_achieved;
@@ -39,6 +43,7 @@ typedef struct {
   TaskHandle_t callback_task;
   gptimer_handle_t gptimer;
   uint16_t steps_per_ml;
+  pump_mode_t mode;
 }step_struct;
 
 

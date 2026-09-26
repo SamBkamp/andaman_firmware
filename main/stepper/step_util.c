@@ -8,6 +8,10 @@
 #include "stepper/step_util.h"
 #include "prot.h"
 
+#define TIMER_2MHZ_RES 1 * 1000 * 1000 * 2
+#define PUMP_MIN_RATE 20
+#define PUMP_MAX_RATE 110
+
 static bool pump_alarm(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_ctx){
   step_struct *ss = (step_struct *)user_ctx;
   BaseType_t woken = pdFALSE;
@@ -32,11 +36,11 @@ static bool pump_alarm(gptimer_handle_t timer, const gptimer_alarm_event_data_t 
   return woken == pdTRUE;
 }
 
-void timer_init_start (step_struct *user_data){
+void timer_init_start (step_struct *user_data, uint32_t alarm_count){
   gptimer_config_t timer_config = {
     .clk_src = GPTIMER_CLK_SRC_DEFAULT, // Select the default clock source
     .direction = GPTIMER_COUNT_UP,      // Counting direction is up
-    .resolution_hz = 1 * 1000 * 1000 * 2,   // resolution for the timer
+    .resolution_hz = TIMER_2MHZ_RES,
   };
 
   ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &user_data->gptimer));
@@ -44,7 +48,7 @@ void timer_init_start (step_struct *user_data){
 
   gptimer_alarm_config_t alarm_config = {
     .reload_count = 0,      // on alarm, reset counter to 0
-    .alarm_count = 370/2, // 370 used to turn the 1mhz frequency to us, but now the freq is different so this is just kinda.. here
+    .alarm_count = alarm_count,
     .flags.auto_reload_on_alarm = true, // Enable auto-reload function
   };
 
@@ -71,24 +75,51 @@ void deregister_pump(void *arg){
 
 
 
-void pump(float ml, step_struct *pump_step_data){
-  if(pump_step_data->total_steps != 0) return; //pumping in progress
+void pump(float ml, program_context *p_ctx){
+  if(p_ctx->pump_step_data->total_steps != 0) return; //pumping in progress
 
-  pump_step_data->total_steps = (uint32_t)(ml*pump_step_data->steps_per_ml);
-  pump_step_data->steps_achieved = 0;
-  pump_step_data->state = 0;
+  p_ctx->pump_step_data->total_steps = (uint32_t)(ml*p_ctx->pump_step_data->steps_per_ml);
+  p_ctx->pump_step_data->steps_achieved = 0;
+  p_ctx->pump_step_data->state = 0;
   wake_driver();
   ESP_LOGI("DOSER", "driver awake");
-  if(pump_step_data->gptimer == NULL){//timer isn't initialised
+  if(p_ctx->pump_step_data->gptimer == NULL){//timer isn't initialised
     ESP_LOGI("DOSER", "timer not initisalised, initialising...");
-    timer_init_start(pump_step_data);
+    timer_init_start(p_ctx->pump_step_data, 370/2); //370/2 is a magic number, sorry
   }
 
   xTaskCreate(deregister_pump, "pump_completed", 2048,
-              pump_step_data, 5, &pump_step_data->callback_task);
+              p_ctx->pump_step_data, 5, &p_ctx->pump_step_data->callback_task);
 
   //pump_step_data->callback_task = xTaskGetCurrentTaskHandle();
-  ESP_ERROR_CHECK(gptimer_start(pump_step_data->gptimer));
+  ESP_ERROR_CHECK(gptimer_start(p_ctx->pump_step_data->gptimer));
+
+
+}
+
+
+void pump_continuous(float ml_per_min, step_struct *pump_step_data){
+  if(ml_per_min <= 0) return;
+  uint32_t alarm_count = (uint32_t)((TIMER_2MHZ_RES * 2.0f) /
+                                    (ml_per_min / 60.0f *
+                                     pump_step_data->steps_per_ml));
+  //two times as fast due to each alarm call only performing half of the square wave
+
+  if(alarm_count < PUMP_MIN_RATE || alarm_count > PUMP_MAX_RATE) return;
+
+  if(pump_step_data->gptimer == NULL){//timer isn't initialised
+    ESP_LOGI("DOSER", "timer not initisalised, initialising...");
+    timer_init_start(pump_step_data, alarm_count);
+  }else {
+    gptimer_alarm_config_t alarm_config = {
+      .reload_count = 0,      // on alarm, reset counter to 0
+      .alarm_count = alarm_count,
+      .flags.auto_reload_on_alarm = true, // Enable auto-reload function
+    };
+
+    ESP_ERROR_CHECK(gptimer_set_alarm_action(pump_step_data->gptimer, &alarm_config));
+  }
+
 
 
 }
