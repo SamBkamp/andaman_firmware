@@ -40,9 +40,13 @@ int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
   ble_hs_mbuf_to_flat(ctx->om, data, sizeof(data), NULL);
   data[len] = 0;
 
+  /* if(data[0] == 's') p_ctx->pump_step_data->mode = DISCRETE; */
+  /* else if(data[0] == 'c') p_ctx->pump_step_data->mode = CONTINUOUS; */
+  /* else return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN; */
+
   char *post_ptr = data;
   uint8_t i = 0;
-  for(; data[i] != 0 && data[i] != ','; i++){}
+  for(; data[i] != 0 && data[i] != ','; i++){} //finds the first comma in the string
 
   data[i++] = 0; //set the comma to a 0 and increment postfix
   post_ptr = &data[i]; //ptr now points to first char in substr after comma
@@ -100,7 +104,7 @@ int manual_dose(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_acce
   if(mls == 0 || mls == ERANGE)
     return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
 
-  pump(mls, p_ctx->pump_step_data);
+  pump(mls, p_ctx);
   return 0;
 }
 

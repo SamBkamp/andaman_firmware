@@ -83,7 +83,7 @@ void app_main(void){
       gpio_set_level(PIN_LED2, 1);
       sched.last_dose = time(NULL);
 
-      pump(sched.ml_per_dose, &pump_step_data); //i think this blocks
+      pump(sched.ml_per_dose, &ctx);
 
       gpio_set_level(PIN_LED2, 0);
 
