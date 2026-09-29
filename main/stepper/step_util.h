@@ -3,8 +3,8 @@
 
 #include "prot.h"
 
-void timer_init_start (step_struct *user_data, uint32_t alarm_count);
+void timer_init_start (program_context *p_ctx, uint32_t alarm_count);
 void pump(float ml, program_context *p_ctx);
-
+void pump_continuous(float ml_per_min, program_context *p_ctx);
 
 #endif

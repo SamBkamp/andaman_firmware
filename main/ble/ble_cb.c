@@ -59,6 +59,10 @@ int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
   p_ctx->schedule->ml_per_dose = strtof(data, NULL);
   p_ctx->schedule->period_s = new_period;
 
+  float steps_per_second = (1 * 1000 * 1000 * 2)/370;
+
+  ESP_LOGI("ADN_BLE", "expected dose time %f seconds", (p_ctx->schedule->ml_per_dose * p_ctx->pump_step_data->steps_per_ml)/steps_per_second);
+
   //commit new schedule to NVS
   ESP_ERROR_CHECK(store_sched(p_ctx->schedule));
 

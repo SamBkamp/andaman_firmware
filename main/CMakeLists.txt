@@ -2,5 +2,5 @@
 idf_component_register(
 SRCS "stepper/step_util.c" "wifi/wifi_driver.c" "ble/ble_cb.c" "ble/ble_driver.c" "generic_util.c" "main.c" "nvs/nvs_driver.c" 
 INCLUDE_DIRS "."
-REQUIRES  driver esp_driver_gpio esp_driver_gptimer lwip esp_wifi nvs_flash bt
+REQUIRES  driver esp_driver_gpio esp_driver_gptimer lwip esp_wifi nvs_flash bt esp_driver_tsens
 )

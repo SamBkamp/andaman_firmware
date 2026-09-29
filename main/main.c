@@ -26,6 +26,8 @@
 #include "nvs_flash.h"
 #include "nvs/nvs_driver.h"
 
+#include "driver/temperature_sensor.h"
+
 uint8_t wake_driver();
 uint8_t sleep_driver();
 void init_gpio_pins();
@@ -35,6 +37,8 @@ static const char *error_activelow[] = {"ERROR", "OK"};
 
 //https://github.com/espressif/esp-idf/blob/08e0d30a/components/esp_driver_gpio/include/driver/gpio.h
 void app_main(void){
+  temperature_sensor_handle_t temp_handle = NULL;
+  float temp;
   doser_schedule sched = {
     .ml_per_dose = 0,
     .period_s = 60,
@@ -50,6 +54,14 @@ void app_main(void){
     .BLE_device_name = "ADN-Doser",
     .total_amount_dosed = 0
   };
+  temperature_sensor_config_t temp_sensor_config = {
+    .range_min = 20,
+    .range_max = 100,
+  };
+
+  ESP_ERROR_CHECK(temperature_sensor_install(&temp_sensor_config, &temp_handle));
+
+  ESP_ERROR_CHECK(temperature_sensor_enable(temp_handle));
 
 
   //init nvs
@@ -78,7 +90,17 @@ void app_main(void){
   gpio_set_level(PIN_LED_ERROR, gpio_get_level(PIN_FAULTB) ^ 1);
   //pin_faultb is active low, so we invert it - LED will only be on when fault is low
 
+
+  //float testing_dose = 200.0f;
+  //pump_continuous(testing_dose, &ctx);
+  //printf("at %f ml/min\n", testing_dose);
+
   while(true){
+    if (temperature_sensor_get_celsius(temp_handle, &temp) == ESP_OK) {
+      //ESP_LOGI("TEMP", "ESP32 temperature: %.2f C", temp);
+      //printf("%.2f C\n", temp);
+      //fflush(stdout);
+    }
     if((sched.last_dose + sched.period_s) < time(NULL) && sched.ml_per_dose > 0){
       gpio_set_level(PIN_LED2, 1);
       sched.last_dose = time(NULL);
@@ -90,6 +112,5 @@ void app_main(void){
     }
     vTaskDelay(pdMS_TO_TICKS(2000));
   }
-
 
 }

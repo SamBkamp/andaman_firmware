@@ -73,6 +73,8 @@ typedef struct {
 #define PC_TIMER_INIT 1 << 2
 #define PC_NVS_INIT 1 << 3
 #define PC_STEP_DIRECTION 1 << 4
+#define PC_PUMP_ACTIVE 1 << 5
+#define PC_PUMP_CONTINUOUS 1 << 6
 
 //hardware state pins
 #define PC_WIFI_ACTIVE_PIN 0
@@ -80,7 +82,8 @@ typedef struct {
 #define PC_TIMER_INIT_PIN 2
 #define PC_NVS_INIT_PIN 3
 #define PC_STEP_DIRECTION_PIN 4
-
+#define PC_PUMP_ACTIVE_PIN 5
+#define PC_PUMP_CONTINUOUS_PIN 6
 
 typedef struct{
   uint8_t hardware_states;
