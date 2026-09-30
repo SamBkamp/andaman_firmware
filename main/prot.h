@@ -43,7 +43,6 @@ typedef struct {
   TaskHandle_t callback_task;
   gptimer_handle_t gptimer;
   uint16_t steps_per_ml;
-  pump_mode_t mode;
 }step_struct;
 
 
@@ -51,6 +50,7 @@ typedef struct {
   float ml_per_dose;
   uint16_t period_s;
   time_t last_dose;
+  pump_mode_t mode;
 }doser_schedule;
 
 

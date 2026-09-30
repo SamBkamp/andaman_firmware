@@ -40,10 +40,26 @@ int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
   ble_hs_mbuf_to_flat(ctx->om, data, sizeof(data), NULL);
   data[len] = 0;
 
-  /* if(data[0] == 's') p_ctx->pump_step_data->mode = DISCRETE; */
-  /* else if(data[0] == 'c') p_ctx->pump_step_data->mode = CONTINUOUS; */
-  /* else return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN; */
+  //turn off cont pumping regardless of which mode
+  p_ctx->hardware_states &= ~(PC_PUMP_CONTINUOUS);
 
+  //this is the handler for cont. pumping
+  if(data[0] == 'c'){
+    errno = 0;
+    float ml_per_min = strtof(&data[1], NULL);
+    ESP_LOGI("ADN_BLE", "cont. dosing %f ml/min", ml_per_min);
+    if(ml_per_min == EINVAL || ml_per_min < 1)
+      return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+
+    p_ctx->schedule->ml_per_dose = ml_per_min;
+    p_ctx->schedule->mode = CONTINUOUS;
+    pump_continuous(ml_per_min, p_ctx);
+
+    return 0;
+  }
+
+
+  //this is the handler for discrete pumping
   char *post_ptr = data;
   uint8_t i = 0;
   for(; data[i] != 0 && data[i] != ','; i++){} //finds the first comma in the string
@@ -58,6 +74,7 @@ int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
 
   p_ctx->schedule->ml_per_dose = strtof(data, NULL);
   p_ctx->schedule->period_s = new_period;
+  p_ctx->schedule->mode = DISCRETE;
 
   float steps_per_second = (1 * 1000 * 1000 * 2)/370;
 
@@ -72,7 +89,12 @@ int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
 int read_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
   program_context *p_ctx = (program_context *)args;
   char data[32];
-  int len = snprintf(data, 32, "%.3f,%d", p_ctx->schedule->ml_per_dose, p_ctx->schedule->period_s);
+  int len;
+
+  if(p_ctx->schedule->mode == DISCRETE)
+    len = snprintf(data, 32, "%.3f,%d", p_ctx->schedule->ml_per_dose, p_ctx->schedule->period_s);
+  else
+    len = snprintf(data, 32, "%.3f ml/min", p_ctx->schedule->ml_per_dose);
 
   return os_mbuf_append(ctx->om, data, len) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 }

@@ -78,7 +78,7 @@ void deregister_pump(void *arg){
   sleep_driver();
   ESP_LOGI("DOSER", "driver sleep");
   p_ctx->pump_step_data->total_steps = 0; //reset total steps when done
-  p_ctx->hardware_states ^= PC_PUMP_ACTIVE;
+  p_ctx->hardware_states &= ~(PC_PUMP_ACTIVE);
   vTaskDelete(NULL);
 }
 
@@ -112,8 +112,10 @@ void pump(float ml, program_context *p_ctx){
 void pump_continuous(float ml_per_min, program_context *p_ctx){
   if(ml_per_min <= 0) return;
 
+  //TODO: add a timeout here so it doesn't spin indefinetly
   while((p_ctx->hardware_states & PC_PUMP_ACTIVE) != 0){ //spin until the pump becomes free?
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    ESP_LOGW("ADN_PUMP", "PUMP STILL ACTIVE - WAITING");
+    vTaskDelay(pdMS_TO_TICKS(500));
   }
 
   uint32_t alarm_count = (uint32_t)(TIMER_2MHZ_RES /
@@ -140,6 +142,7 @@ void pump_continuous(float ml_per_min, program_context *p_ctx){
   }
 
   p_ctx->hardware_states |= PC_PUMP_CONTINUOUS;
+  p_ctx->hardware_states |= PC_PUMP_ACTIVE;
 
   wake_driver();
   ESP_LOGI("DOSER", "driver awake");
