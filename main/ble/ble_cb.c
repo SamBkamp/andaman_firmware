@@ -55,6 +55,8 @@ int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
     p_ctx->schedule->mode = CONTINUOUS;
     pump_continuous(ml_per_min, p_ctx);
 
+    ESP_ERROR_CHECK(store_sched(p_ctx->schedule));
+
     return 0;
   }
 

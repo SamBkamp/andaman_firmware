@@ -42,7 +42,8 @@ void app_main(void){
   doser_schedule sched = {
     .ml_per_dose = 0,
     .period_s = 60,
-    .last_dose = 0
+    .last_dose = 0,
+    .mode = DISCRETE
   };
   step_struct pump_step_data = {
     .steps_per_ml = DEFAULT_STEP_CALIBRATION
@@ -58,6 +59,8 @@ void app_main(void){
     .range_min = 20,
     .range_max = 100,
   };
+
+  gpio_set_level(PIN_LED_GEN, 1);
 
   ESP_ERROR_CHECK(temperature_sensor_install(&temp_sensor_config, &temp_handle));
 
@@ -77,8 +80,11 @@ void app_main(void){
   load_or_default(load_hardware_state, store_hardware_state, &ctx.hardware_states, &ctx.hardware_states);
   load_or_default(load_device_name, store_device_name, &ctx.BLE_device_name, &ctx.BLE_device_name);
 
+
   ESP_LOGI(TAG, "Device name: %s", ctx.BLE_device_name);
 
+  ctx.hardware_states &= ~(PC_PUMP_ACTIVE); //turn off active on restart
+  //the pump can't be active but it may have been stored that way if pump lost power while pumping
   sched.last_dose = 0; //so the schedule starts executing from now. Time independant as we might not have a a good time source on each boot
 
   init_gpio_pins();
@@ -86,14 +92,15 @@ void app_main(void){
 
   //set stepper direction
   gpio_set_level(PIN_DIR, (ctx.hardware_states & PC_STEP_DIRECTION)>>PC_STEP_DIRECTION_PIN);
-  gpio_set_level(PIN_LED_GEN, 1);
+  gpio_set_level(PIN_LED_GEN, 0);
   gpio_set_level(PIN_LED_ERROR, gpio_get_level(PIN_FAULTB) ^ 1);
   //pin_faultb is active low, so we invert it - LED will only be on when fault is low
 
 
-  //float testing_dose = 200.0f;
-  //pump_continuous(testing_dose, &ctx);
-  //printf("at %f ml/min\n", testing_dose);
+  //on startup, check if the saved schedule is a continious one
+  if(sched.mode == CONTINUOUS){
+    pump_continuous(sched.ml_per_dose, &ctx);
+  }
 
   while(true){
     if (temperature_sensor_get_celsius(temp_handle, &temp) == ESP_OK) {
@@ -101,7 +108,9 @@ void app_main(void){
       //printf("%.2f C\n", temp);
       //fflush(stdout);
     }
-    if((sched.last_dose + sched.period_s) < time(NULL) && sched.ml_per_dose > 0){
+    if((sched.last_dose + sched.period_s) < time(NULL)
+       && sched.ml_per_dose > 0
+       && sched.mode == DISCRETE){
       gpio_set_level(PIN_LED2, 1);
       sched.last_dose = time(NULL);
 
