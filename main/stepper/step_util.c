@@ -95,6 +95,17 @@ void pump(float ml, program_context *p_ctx){
   if(p_ctx->pump_step_data->gptimer == NULL){//timer isn't initialised
     ESP_LOGI("DOSER", "timer not initisalised, initialising...");
     timer_init_start(p_ctx, 370/2); //370/2 Is a magic number, sorry
+  }else{
+    //reset alarm config to make sure discrete
+    //pumping is consistent
+    gptimer_alarm_config_t alarm_config = {
+      .reload_count = 0,      // on alarm, reset counter to 0
+      .alarm_count = 370/2,
+      .flags.auto_reload_on_alarm = true, // Enable auto-reload function
+    };
+
+    ESP_ERROR_CHECK(gptimer_set_alarm_action(p_ctx->pump_step_data->gptimer, &alarm_config));
+
   }
 
   xTaskCreate(deregister_pump, "pump_completed", 2048,
