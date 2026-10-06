@@ -11,6 +11,8 @@
 #define TIMER_2MHZ_RES 1 * 1000 * 1000 * 2
 #define PUMP_MIN_RATE 20
 #define PUMP_MAX_RATE 500
+#define DEFAULT_DISCRETE_SPEED 140 //this is a magic number, sorry
+
 
 static bool pump_alarm(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *ctx){
   program_context *p_ctx = (program_context *)ctx;
@@ -94,13 +96,13 @@ void pump(float ml, program_context *p_ctx){
   ESP_LOGI("DOSER", "driver awake");
   if(p_ctx->pump_step_data->gptimer == NULL){//timer isn't initialised
     ESP_LOGI("DOSER", "timer not initisalised, initialising...");
-    timer_init_start(p_ctx, 370/2); //370/2 Is a magic number, sorry
+    timer_init_start(p_ctx, DEFAULT_DISCRETE_SPEED);
   }else{
     //reset alarm config to make sure discrete
     //pumping is consistent
     gptimer_alarm_config_t alarm_config = {
       .reload_count = 0,      // on alarm, reset counter to 0
-      .alarm_count = 370/2,
+      .alarm_count = DEFAULT_DISCRETE_SPEED,
       .flags.auto_reload_on_alarm = true, // Enable auto-reload function
     };
 
