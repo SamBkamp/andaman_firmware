@@ -84,7 +84,6 @@ void deregister_pump(void *arg){
 void pump(float ml, program_context *p_ctx){
   if((p_ctx->hardware_states & PC_PUMP_ACTIVE) != 0) return; //pumping in progress
   uint32_t steps = (uint32_t)(ml*p_ctx->pump_step_data->steps_per_ml);
-
   p_ctx->pump_step_data->total_steps = steps;
   p_ctx->pump_step_data->steps_achieved = 0;
   p_ctx->pump_step_data->state = 0;
