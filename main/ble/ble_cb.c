@@ -23,7 +23,7 @@
 #define BLE_DEV_NAME "ADN-DOSER"
 #define BLE_ADV_INTVL 0.625
 
-static const version SOFTWARE_VERSION = {.v = {1,0,1}};
+static const version SOFTWARE_VERSION = {.v = {1,0,3}};
 static const version BOARD_VERSION = {.v = {0,0,1}};
 
 
