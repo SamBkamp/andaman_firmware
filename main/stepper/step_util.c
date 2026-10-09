@@ -8,11 +8,6 @@
 #include "stepper/step_util.h"
 #include "prot.h"
 
-#define TIMER_2MHZ_RES 1 * 1000 * 1000 * 2
-#define PUMP_MIN_RATE 20
-#define PUMP_MAX_RATE 500
-#define DEFAULT_DISCRETE_SPEED 140 //this is a magic number, sorry
-
 
 static bool pump_alarm(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *ctx){
   program_context *p_ctx = (program_context *)ctx;
@@ -88,12 +83,14 @@ void deregister_pump(void *arg){
 
 void pump(float ml, program_context *p_ctx){
   if((p_ctx->hardware_states & PC_PUMP_ACTIVE) != 0) return; //pumping in progress
+  uint32_t steps = (uint32_t)(ml*p_ctx->pump_step_data->steps_per_ml);
 
-  p_ctx->pump_step_data->total_steps = (uint32_t)(ml*p_ctx->pump_step_data->steps_per_ml);
+  p_ctx->pump_step_data->total_steps = steps;
   p_ctx->pump_step_data->steps_achieved = 0;
   p_ctx->pump_step_data->state = 0;
   wake_driver();
   ESP_LOGI("DOSER", "driver awake");
+
   if(p_ctx->pump_step_data->gptimer == NULL){//timer isn't initialised
     ESP_LOGI("DOSER", "timer not initisalised, initialising...");
     timer_init_start(p_ctx, DEFAULT_DISCRETE_SPEED);
@@ -115,10 +112,9 @@ void pump(float ml, program_context *p_ctx){
 
   p_ctx->hardware_states |= PC_PUMP_ACTIVE;
   p_ctx->hardware_states &= ~(PC_PUMP_CONTINUOUS); //turn off cont. flag. This function only for discrete
-  //pump_step_data->callback_task = xTaskGetCurrentTaskHandle();
+
+
   ESP_ERROR_CHECK(gptimer_start(p_ctx->pump_step_data->gptimer));
-
-
 }
 
 
@@ -156,6 +152,8 @@ void pump_continuous(float ml_per_min, program_context *p_ctx){
 
   p_ctx->hardware_states |= PC_PUMP_CONTINUOUS;
   p_ctx->hardware_states |= PC_PUMP_ACTIVE;
+  gpio_set_level(PIN_LOWI_MODE, 1); //set lowi mode for continuous dosing
+
 
   wake_driver();
   ESP_LOGI("DOSER", "driver awake");

@@ -71,10 +71,17 @@ int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
 
   //BEWARE OF TRUNCATION: ULONG >= 32bits, period_s is 16 bits
   uint16_t new_period = (uint16_t)strtol(post_ptr, NULL, 10);
-  if(new_period < 1)
+  float mls_to_dose = strtof(data, NULL);
+  uint32_t steps = (uint32_t)(mls_to_dose*p_ctx->pump_step_data->steps_per_ml);
+
+  //checks if the expected dosing time is longer than the period between doses
+  //WARNING: this is only calculated at setting time, so changing steps_per_ml (like during
+  //autocal) would change this and potentially invalidate the condition in rare cases
+  if(new_period < 1
+     || (steps/DEFAULT_STEPS_PER_SEC()) > new_period)
     return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
 
-  p_ctx->schedule->ml_per_dose = strtof(data, NULL);
+  p_ctx->schedule->ml_per_dose = mls_to_dose;
   p_ctx->schedule->period_s = new_period;
   p_ctx->schedule->mode = DISCRETE;
 
@@ -127,6 +134,9 @@ int manual_dose(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_acce
                                sizeof(data),
                                NULL);
   data[len] = 0;
+
+  ESP_LOGI("ADN_BLE", "raw data got: %s", data);
+
   mls = strtof((char *)data, NULL);
 
   if(mls == 0 || mls == ERANGE)
