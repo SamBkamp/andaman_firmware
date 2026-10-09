@@ -15,10 +15,11 @@
 #define PIN_LED2 6
 #define PIN_LED_ERROR PIN_LED1
 #define PIN_LED_GEN PIN_LED2
+#define PIN_LOWI_MODE 18
 
 #define GPIO_OUTPUT_PIN_REG (1ULL<<PIN_STEP) | (1ULL<<PIN_DIR)          \
   |  (1ULL<<PIN_SLEEPB) | (1ULL<<PIN_ENABLE)                            \
-  | (1ULL<<PIN_LED1) | (1ULL<<PIN_LED2)
+  | (1ULL<<PIN_LED1) | (1ULL<<PIN_LED2) | (1ULL<<PIN_LOWI_MODE)
 
 #define GPIO_INPUT_PIN_MASK (1ULL<<PIN_FAULTB)
 #define IOBUF_SIZE 512
@@ -68,19 +69,13 @@ typedef struct {
 }doser_time_schedule;
 
 //hardware state masks
-#define PC_WIFI_ACTIVE 1 << 0
-#define PC_BLE_ACTIVCE 1 << 1
-#define PC_TIMER_INIT 1 << 2
-#define PC_NVS_INIT 1 << 3
+#define PC_LOWI_MODE 1 << 3
 #define PC_STEP_DIRECTION 1 << 4
 #define PC_PUMP_ACTIVE 1 << 5
 #define PC_PUMP_CONTINUOUS 1 << 6
 
 //hardware state pins
-#define PC_WIFI_ACTIVE_PIN 0
-#define PC_BLE_ACTIVCE_PIN 1
-#define PC_TIMER_INIT_PIN 2
-#define PC_NVS_INIT_PIN 3
+#define PC_LOWI_MODE_PIN 3
 #define PC_STEP_DIRECTION_PIN 4
 #define PC_PUMP_ACTIVE_PIN 5
 #define PC_PUMP_CONTINUOUS_PIN 6
