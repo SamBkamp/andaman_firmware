@@ -97,9 +97,9 @@ int read_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
   int len;
 
   if(p_ctx->schedule->mode == DISCRETE)
-    len = snprintf(data, 32, "%.3f,%d", p_ctx->schedule->ml_per_dose, p_ctx->schedule->period_s);
+    len = snprintf(data, 32, "%.2f,%d", p_ctx->schedule->ml_per_dose, p_ctx->schedule->period_s);
   else
-    len = snprintf(data, 32, "%.3f ml/min", p_ctx->schedule->ml_per_dose);
+    len = snprintf(data, 32, "c%.2f", p_ctx->schedule->ml_per_dose);
 
   return os_mbuf_append(ctx->om, data, len) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 }

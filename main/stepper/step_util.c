@@ -70,7 +70,6 @@ void timer_init_start (program_context *p_ctx, uint32_t alarm_count){
 
 void deregister_pump(void *arg){
   program_context *p_ctx = (program_context  *)arg;
-  //step_struct *ss = (step_struct *)arg;
   ulTaskNotifyTake(pdTRUE, portMAX_DELAY);//wait for timer isr to finish
   sleep_driver();
   ESP_LOGI("DOSER", "driver sleep");
@@ -151,12 +150,14 @@ void pump_continuous(float ml_per_min, program_context *p_ctx){
 
   p_ctx->hardware_states |= PC_PUMP_CONTINUOUS;
   p_ctx->hardware_states |= PC_PUMP_ACTIVE;
-  gpio_set_level(PIN_LOWI_MODE, 1); //set lowi mode for continuous dosing
+  gpio_set_level(PIN_LOWI_MODE, 1); //set lowi mode for continuous dosing for thermal reasons
 
 
   wake_driver();
   ESP_LOGI("DOSER", "driver awake");
 
+
+  //pump deregistering function after continuous dosing is completed
   xTaskCreate(deregister_pump, "pump_completed", 2048,
               p_ctx, 5, &p_ctx->pump_step_data->callback_task);
 
