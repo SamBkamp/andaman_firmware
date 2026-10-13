@@ -78,7 +78,8 @@ int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
   //WARNING: this is only calculated at setting time, so changing steps_per_ml (like during
   //autocal) would change this and potentially invalidate the condition in rare cases
   if(new_period < 1
-     || (steps/DEFAULT_STEPS_PER_SEC()) > new_period)
+     //|| (steps/DEFAULT_STEPS_PER_SEC()) > new_period)
+     )
     return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
 
   p_ctx->schedule->ml_per_dose = mls_to_dose;

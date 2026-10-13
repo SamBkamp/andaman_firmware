@@ -105,6 +105,7 @@ void pump(float ml, program_context *p_ctx){
 
   }
 
+  gpio_set_level(PIN_LOWI_MODE, 0); //turn off lowi mode for discrete dosing
   xTaskCreate(deregister_pump, "pump_completed", 2048,
               p_ctx, 5, &p_ctx->pump_step_data->callback_task);
 
@@ -117,7 +118,10 @@ void pump(float ml, program_context *p_ctx){
 
 
 void pump_continuous(float ml_per_min, program_context *p_ctx){
-  if(ml_per_min <= 0) return;
+  if(ml_per_mind < PUMP_MIN_RATE || ml_per_min > PUMP_MAX_RATE){
+    ESP_LOGW("ADN_PUMP", "INVALID PUMP RATE: %d", alarm_count);
+    return;
+  }
 
   //TODO: add a timeout here so it doesn't spin indefinetly
   while((p_ctx->hardware_states & PC_PUMP_ACTIVE) != 0){ //spin until the pump becomes free?
@@ -129,11 +133,6 @@ void pump_continuous(float ml_per_min, program_context *p_ctx){
                                     ((ml_per_min / 60.0f) *
                                      p_ctx->pump_step_data->steps_per_ml * 2));
   //two times as fast due to each alarm call only performing half of the square wave
-
-  if(alarm_count < PUMP_MIN_RATE || alarm_count > PUMP_MAX_RATE){
-    ESP_LOGW("ADN_PUMP", "INVALID PUMP RATE: %d", alarm_count);
-    return;
-  }
 
   if(p_ctx->pump_step_data->gptimer == NULL){//timer isn't initialised
     ESP_LOGI("DOSER", "timer not initisalised, initialising...");
