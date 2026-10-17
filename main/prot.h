@@ -34,7 +34,7 @@
 #define DEFAULT_STEP_CALIBRATION 2000
 
 typedef enum {
-  INTERVAL,TIME
+  INTERVAL,TIME,CONTINUOUS
 } pump_mode_t;
 
 typedef struct {
@@ -45,14 +45,6 @@ typedef struct {
   gptimer_handle_t gptimer;
   uint16_t steps_per_ml;
 }step_struct;
-
-
-typedef struct {
-  float ml_per_dose;
-  uint32_t period_s;
-  time_t last_dose;
-  pump_mode_t mode;
-}doser_schedule;
 
 
 //still yet to be implemented
@@ -66,8 +58,17 @@ typedef struct{
 typedef struct {
   uint8_t count;
   dose_time_data_t times[MAX_DOSE_TIMEPOINTS];
-  uint16_t flag_bitmask; //has to be equal to or wider than MAX_DOSE_TIMEPOINTS. 
+  uint16_t flag_bitmask; //has to be equal to or wider than MAX_DOSE_TIMEPOINTS.
 }doser_time_schedule;
+
+typedef struct {
+  float ml_per_dose;
+  uint32_t period_s;
+  doser_time_schedule timed;
+  time_t last_dose;
+  pump_mode_t mode;
+}doser_schedule;
+
 
 //hardware state masks
 #define PC_LOWI_MODE 1 << 3

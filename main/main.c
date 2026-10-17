@@ -43,7 +43,11 @@ void app_main(void){
     .ml_per_dose = 0,
     .period_s = 60,
     .last_dose = 0,
-    .mode = INTERVAL
+    .mode = INTERVAL,
+    .timed = {
+      .count = 0,
+      .flag_bitmask = 0
+    }
   };
   step_struct pump_step_data = {
     .steps_per_ml = DEFAULT_STEP_CALIBRATION
@@ -61,24 +65,20 @@ void app_main(void){
   };
 
   dose_time_data_t d_time = {
-    .hour = 23,
-    .minute = 45
+    .hour = 00,
+    .minute = 47,
+    .ml = 2.74
   };
 
 
   gpio_set_level(PIN_LED_GEN, 1);
-
   ESP_ERROR_CHECK(temperature_sensor_install(&temp_sensor_config, &temp_handle));
-
   ESP_ERROR_CHECK(temperature_sensor_enable(temp_handle));
 
-
-  //init nvs
   esp_err_t nvs_ret = nvs_flash_init();
 
   /* if (nvs_ret == ESP_ERR_NVS_NO_FREE_PAGES || nvs_ret == ESP_ERR_NVS_NEW_VERSION_FOUND) */
   /*   ESP_ERROR_CHECK(nvs_flash_erase()); */
-
 
   //load initialisation data from NVS
   load_or_default(load_schedule, store_sched, &sched, &sched);
@@ -89,6 +89,8 @@ void app_main(void){
 
   print_time();
   ESP_LOGI(TAG, "Device name: %s", ctx.BLE_device_name);
+  //sched.timed.times[sched.timed.count++] = d_time;
+  //sched.mode = TIME;
 
   ctx.hardware_states &= ~(PC_PUMP_ACTIVE); //turn off active on restart
   //the pump can't be active but it may have been stored that way if pump lost power while pumping
@@ -96,31 +98,19 @@ void app_main(void){
 
   init_gpio_pins();
   ble_init(&ctx);
-
   //set default pin outputs
   gpio_set_level(PIN_DIR, (ctx.hardware_states & PC_STEP_DIRECTION)>>PC_STEP_DIRECTION_PIN);
   gpio_set_level(PIN_LED_GEN, 0);
   gpio_set_level(PIN_LED_ERROR, gpio_get_level(PIN_FAULTB) ^ 1);
   gpio_set_level(PIN_LOWI_MODE, 0);
-  //pin_faultb is active low, so we invert it - LED will only be on when fault is low
 
 
-  time_t timestamp = time(NULL);
-  struct tm timeinfo;
 
-  localtime_r(&timestamp, &timeinfo);
-
-  int hours = timeinfo.tm_hour;
-  int minutes = timeinfo.tm_min;
-
-  ESP_LOGW(TAG, "hours to dose: %d", d_time.hour - hours);
-  ESP_LOGW(TAG, "minutes to dose: %d", d_time.minute - minutes);
-
-
+  //TEMPORARILY DISABLED THANKS TO THERMAL ISSUES LOL
   //on startup, check if the saved schedule is a continious one
-  if(sched.mode == CONTINUOUS){
-    pump_continuous(sched.ml_per_dose, &ctx);
-  }
+//  if(sched.mode == CONTINUOUS){
+//    pump_continuous(sched.ml_per_dose, &ctx);
+//  }
 
   while(true){
     if (temperature_sensor_get_celsius(temp_handle, &temp) == ESP_OK) {
@@ -128,17 +118,41 @@ void app_main(void){
       //printf("%.2f C\n", temp);
       //fflush(stdout);
     }
-    if((sched.last_dose + sched.period_s) < time(NULL)
-       && sched.ml_per_dose > 0
-       && sched.mode == DISCRETE){
-      gpio_set_level(PIN_LED2, 1);
-      sched.last_dose = time(NULL);
 
-      pump(sched.ml_per_dose, &ctx);
+    switch(sched.mode){
+    case INTERVAL:
+      if((sched.last_dose + sched.period_s) < time(NULL)
+         && sched.ml_per_dose > 0){
+        gpio_set_level(PIN_LED2, 1);
+        sched.last_dose = time(NULL);
+        pump(sched.ml_per_dose, &ctx);
+      }
+      break;
+    case TIME:
+      time_t timestamp = time(NULL);
+      struct tm timeinfo;
+      localtime_r(&timestamp, &timeinfo);
 
-      gpio_set_level(PIN_LED2, 0);
+      int hours = timeinfo.tm_hour;
+      int minutes = timeinfo.tm_min;
 
+      for(uint8_t i = 0; i < sched.timed.count; i++){
+        uint16_t mask = 1 << i;
+        if(sched.timed.times[i].hour == hours
+           && sched.timed.times[i].minute == minutes
+           && (sched.timed.flag_bitmask & mask) == 0){
+          pump(sched.timed.times[i].ml, &ctx);
+          sched.timed.flag_bitmask |= mask;
+        }
+      }
+
+      break;
+
+    default:
+      break;
     }
+
+
     vTaskDelay(pdMS_TO_TICKS(2000));
   }
 

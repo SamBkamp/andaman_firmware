@@ -88,7 +88,7 @@ int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
 
   p_ctx->schedule->ml_per_dose = mls_to_dose;
   p_ctx->schedule->period_s = new_period;
-  p_ctx->schedule->mode = DISCRETE;
+  p_ctx->schedule->mode = INTERVAL;
 
   ESP_LOGI("ADN_STEPPER", "dosing period: %d", p_ctx->schedule->period_s);
 
@@ -103,7 +103,7 @@ int read_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
   char data[32];
   int len;
 
-  if(p_ctx->schedule->mode == DISCRETE)
+  if(p_ctx->schedule->mode == INTERVAL)
     len = snprintf(data, 32, "%.2f,%ld", p_ctx->schedule->ml_per_dose, p_ctx->schedule->period_s);
   else
     len = snprintf(data, 32, "c%.2f", p_ctx->schedule->ml_per_dose);
