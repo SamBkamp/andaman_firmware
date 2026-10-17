@@ -11,6 +11,9 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "nvs/nvs_driver.h"
+#include <time.h>
+#include <sys/time.h>
+#include <stdbool.h>
 
 static const char *TAG = "ANDAMAN_DOSER";
 static const char *error_activelow[] = {"ERROR", "OK"};
@@ -23,13 +26,23 @@ void update_sys_time(void){
   ESP_ERROR_CHECK(esp_netif_sntp_sync_wait(pdMS_TO_TICKS(3000)));
 }
 
+bool update_sys_time_from_long(time_t unix_time){
+  struct timeval tv = {
+    .tv_sec = unix_time,
+    .tv_usec = 0
+  };
+
+  return settimeofday(&tv, NULL) == 0;
+}
+
+
 void print_time(void){
   time_t now;
   char strftime_buf[64];
   struct tm timeinfo;
 
   time(&now);
-  setenv("TZ", "UTC+8", 1);
+  setenv("TZ", "UTC-8", 1); //unix is fucking weird about timezones
   tzset();
   localtime_r(&now, &timeinfo);
   strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);

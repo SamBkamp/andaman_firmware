@@ -43,7 +43,7 @@ void app_main(void){
     .ml_per_dose = 0,
     .period_s = 60,
     .last_dose = 0,
-    .mode = DISCRETE
+    .mode = INTERVAL
   };
   step_struct pump_step_data = {
     .steps_per_ml = DEFAULT_STEP_CALIBRATION
@@ -59,6 +59,12 @@ void app_main(void){
     .range_min = 20,
     .range_max = 100,
   };
+
+  dose_time_data_t d_time = {
+    .hour = 23,
+    .minute = 45
+  };
+
 
   gpio_set_level(PIN_LED_GEN, 1);
 
@@ -79,8 +85,9 @@ void app_main(void){
   load_or_default(load_step_calibration, store_step_calibration, &pump_step_data.steps_per_ml, &pump_step_data.steps_per_ml);
   load_or_default(load_hardware_state, store_hardware_state, &ctx.hardware_states, &ctx.hardware_states);
   load_or_default(load_device_name, store_device_name, &ctx.BLE_device_name, &ctx.BLE_device_name);
+  load_or_default(load_systime, store_systime, NULL, NULL);
 
-
+  print_time();
   ESP_LOGI(TAG, "Device name: %s", ctx.BLE_device_name);
 
   ctx.hardware_states &= ~(PC_PUMP_ACTIVE); //turn off active on restart
@@ -96,6 +103,18 @@ void app_main(void){
   gpio_set_level(PIN_LED_ERROR, gpio_get_level(PIN_FAULTB) ^ 1);
   gpio_set_level(PIN_LOWI_MODE, 0);
   //pin_faultb is active low, so we invert it - LED will only be on when fault is low
+
+
+  time_t timestamp = time(NULL);
+  struct tm timeinfo;
+
+  localtime_r(&timestamp, &timeinfo);
+
+  int hours = timeinfo.tm_hour;
+  int minutes = timeinfo.tm_min;
+
+  ESP_LOGW(TAG, "hours to dose: %d", d_time.hour - hours);
+  ESP_LOGW(TAG, "minutes to dose: %d", d_time.minute - minutes);
 
 
   //on startup, check if the saved schedule is a continious one

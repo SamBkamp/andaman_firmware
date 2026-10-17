@@ -3,6 +3,8 @@
 #include "prot.h"
 #include "nvs/nvs_driver.h"
 #include "esp_err.h"
+#include "generic_util.h"
+#include "esp_log.h"
 
 #define NVS_NAMESPACE "AD_DOSER_CFG"
 #define NVS_KEY_SCHEDULE "doser_sched"
@@ -10,7 +12,7 @@
 #define NVS_KEY_HWSTATE "hw_state"
 #define NVS_KEY_DEVNAME "device_name"
 #define NVS_KEY_TOTAL_DOSED "total_dosed"
-
+#define NVS_KEY_SYSTIME "sys_time"
 
 esp_err_t store_sched(void *schedule){
   doser_schedule *sched = (doser_schedule *)schedule;
@@ -78,6 +80,50 @@ esp_err_t store_step_calibration(void *steps){
 
   return err;
 }
+
+esp_err_t store_systime(void *ignore){
+  time_t now = time(NULL);
+  nvs_handle_t handle;
+  esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
+
+  ESP_LOGI("ADN_NVS", "Saving timestamp: %lld", (long long)now);
+
+  if(err != ESP_OK)
+    return err;
+
+  err = nvs_set_blob(handle, NVS_KEY_SYSTIME, &now, sizeof(now));
+  if(err == ESP_OK)
+    err = nvs_commit(handle);
+
+  nvs_close(handle);
+
+  return err;
+}
+
+esp_err_t load_systime(void *ignore){
+  time_t ret_time;
+  nvs_handle_t handle;
+  size_t size = sizeof(ret_time);
+
+  esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &handle);
+
+  if (err != ESP_OK)
+    return err;
+
+  err = nvs_get_blob(handle, NVS_KEY_SYSTIME, &ret_time, &size);
+  nvs_close(handle);
+
+  if (err != ESP_OK)
+    return err;
+
+  ESP_LOGI("ADN_NVS", "Loaded timestamp: %lld",
+           (long long)ret_time);
+
+  update_sys_time_from_long(ret_time);
+
+  return err;
+}
+
 
 esp_err_t load_hardware_state(void *hws){
   uint8_t *hardware_state = (uint8_t *)hws;

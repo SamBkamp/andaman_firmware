@@ -11,10 +11,12 @@ typedef esp_err_t (*nvs_load_cb)(void *data);
 typedef esp_err_t (*nvs_store_cb)(void *data);
 
 void update_sys_time(void);
+bool update_sys_time_from_long(time_t unix_time);
 void print_time(void);
 uint8_t wake_driver();
 uint8_t sleep_driver();
 void init_gpio_pins();
 esp_err_t load_or_default(nvs_load_cb load, nvs_store_cb store, void* data, void* def_val);
+
 
 #endif

@@ -45,7 +45,7 @@ static struct ble_gatt_chr_def characteristics[] = {
   },
   {
     .uuid = &device_info_uuid.u,
-    .flags = BLE_GATT_CHR_F_READ,
+    .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE,
     .access_cb = device_information,
   },
   {

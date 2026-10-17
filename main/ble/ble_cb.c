@@ -13,11 +13,15 @@
 #include "nvs_flash.h"
 #include "nvs/nvs_driver.h"
 #include "stepper/step_util.h"
+#include "generic_util.h"
 
 #include "driver/gpio.h"
 
 #include <string.h>
 #include <errno.h>
+#include <time.h>
+#include <sys/time.h>
+#include <stdbool.h>
 
 
 #define BLE_DEV_NAME "ADN-DOSER"
@@ -86,6 +90,8 @@ int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
   p_ctx->schedule->period_s = new_period;
   p_ctx->schedule->mode = DISCRETE;
 
+  ESP_LOGI("ADN_STEPPER", "dosing period: %d", p_ctx->schedule->period_s);
+
   //commit new schedule to NVS
   ESP_ERROR_CHECK(store_sched(p_ctx->schedule));
 
@@ -98,23 +104,53 @@ int read_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
   int len;
 
   if(p_ctx->schedule->mode == DISCRETE)
-    len = snprintf(data, 32, "%.2f,%d", p_ctx->schedule->ml_per_dose, p_ctx->schedule->period_s);
+    len = snprintf(data, 32, "%.2f,%ld", p_ctx->schedule->ml_per_dose, p_ctx->schedule->period_s);
   else
     len = snprintf(data, 32, "c%.2f", p_ctx->schedule->ml_per_dose);
 
   return os_mbuf_append(ctx->om, data, len) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 }
 
-int device_information(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
-  char data[32];
-  data[0] = SOFTWARE_VERSION.v[0];
-  data[1] = SOFTWARE_VERSION.v[1];
-  data[2] = SOFTWARE_VERSION.v[2];
-  data[3] = BOARD_VERSION.v[0];
-  data[4] = BOARD_VERSION.v[1];
-  data[5] = BOARD_VERSION.v[2];
 
-  return os_mbuf_append(ctx->om, data, sizeof(version)*2) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+
+int device_information(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){
+
+  switch (ctx->op) {
+
+    //SOFTWARE AND BOARD VERSION
+  case BLE_GATT_ACCESS_OP_READ_CHR:
+    char data[32];
+    data[0] = SOFTWARE_VERSION.v[0];
+    data[1] = SOFTWARE_VERSION.v[1];
+    data[2] = SOFTWARE_VERSION.v[2];
+    data[3] = BOARD_VERSION.v[0];
+    data[4] = BOARD_VERSION.v[1];
+    data[5] = BOARD_VERSION.v[2];
+    return os_mbuf_append(ctx->om, data, sizeof(version)*2) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+    break;
+
+    //SET SYS TIME
+  case BLE_GATT_ACCESS_OP_WRITE_CHR:
+    ;
+    program_context *p_ctx = (program_context *)args;
+    uint16_t len = OS_MBUF_PKTLEN(ctx->om);
+    int64_t timestamp;
+
+    if(len != sizeof(timestamp)) return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+
+    int rc = os_mbuf_copydata(ctx->om, 0, sizeof(timestamp), &timestamp);
+    if (rc != 0) return BLE_ATT_ERR_UNLIKELY;
+
+    time_t unix_time = (time_t)timestamp;
+    update_sys_time_from_long(unix_time);    
+    print_time();
+    store_systime(NULL);
+    return 0;
+    break;
+
+  default:
+    return BLE_ATT_ERR_UNLIKELY;
+  }
 }
 
 int manual_dose(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args){

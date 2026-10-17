@@ -30,11 +30,11 @@
 #define SEC_PER_HR 3600
 #define AD_HOUR_TO_SECS(hrs) hrs * SEC_PER_HR
 
-#define MAX_DOSE_TIMEPOINTS 20
+#define MAX_DOSE_TIMEPOINTS 16
 #define DEFAULT_STEP_CALIBRATION 2000
 
 typedef enum {
-  DISCRETE, CONTINUOUS
+  INTERVAL,TIME
 } pump_mode_t;
 
 typedef struct {
@@ -49,7 +49,7 @@ typedef struct {
 
 typedef struct {
   float ml_per_dose;
-  uint16_t period_s;
+  uint32_t period_s;
   time_t last_dose;
   pump_mode_t mode;
 }doser_schedule;
@@ -64,8 +64,9 @@ typedef struct{
 
 //same with this
 typedef struct {
-  uint8_t time_points;
+  uint8_t count;
   dose_time_data_t times[MAX_DOSE_TIMEPOINTS];
+  uint16_t flag_bitmask; //has to be equal to or wider than MAX_DOSE_TIMEPOINTS. 
 }doser_time_schedule;
 
 //hardware state masks
