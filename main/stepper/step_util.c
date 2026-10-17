@@ -73,6 +73,7 @@ void deregister_pump(void *arg){
   ulTaskNotifyTake(pdTRUE, portMAX_DELAY);//wait for timer isr to finish
   sleep_driver();
   ESP_LOGI("DOSER", "driver sleep");
+  gpio_set_level(PIN_LED_GEN, 0);
   p_ctx->pump_step_data->total_steps = 0; //reset total steps when done
   p_ctx->hardware_states &= ~(PC_PUMP_ACTIVE);
   vTaskDelete(NULL);
@@ -86,6 +87,7 @@ void pump(float ml, program_context *p_ctx){
   p_ctx->pump_step_data->total_steps = steps;
   p_ctx->pump_step_data->steps_achieved = 0;
   p_ctx->pump_step_data->state = 0;
+  gpio_set_level(PIN_LED_GEN, 1);
   wake_driver();
   ESP_LOGI("DOSER", "driver awake");
 
@@ -118,8 +120,8 @@ void pump(float ml, program_context *p_ctx){
 
 
 void pump_continuous(float ml_per_min, program_context *p_ctx){
-  if(ml_per_mind < PUMP_MIN_RATE || ml_per_min > PUMP_MAX_RATE){
-    ESP_LOGW("ADN_PUMP", "INVALID PUMP RATE: %d", alarm_count);
+  if(ml_per_min < PUMP_MIN_RATE || ml_per_min > PUMP_MAX_RATE){
+    ESP_LOGW("ADN_PUMP", "INVALID PUMP RATE: %d", ml_per_min);
     return;
   }
 
