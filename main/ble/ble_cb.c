@@ -31,41 +31,25 @@ static const version SOFTWARE_VERSION = {.v = {1,0,3}};
 static const version BOARD_VERSION = {.v = {0,0,1}};
 
 
-int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
-  program_context *p_ctx = (program_context *)args;
-  char data[32];
-  float mls_per_dose = 0;
-  uint16_t period = 0;
-  uint16_t len = OS_MBUF_PKTLEN(ctx->om);
+int continuous_pumping_handler(program_context *p_ctx, char *data){
+  return 0; //EARLY RETURN, THIS FUNCTIONALITY IS TEMPORARILY REMOVED
 
-  if(len > sizeof(data))
+  errno = 0;
+  float ml_per_min = strtof(&data[1], NULL);
+  ESP_LOGI("ADN_BLE", "cont. dosing %f ml/min", ml_per_min);
+  if(ml_per_min == EINVAL || ml_per_min < 1)
     return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
 
-  ble_hs_mbuf_to_flat(ctx->om, data, sizeof(data), NULL);
-  data[len] = 0;
+  p_ctx->schedule->ml_per_dose = ml_per_min;
+  p_ctx->schedule->mode = CONTINUOUS;
+  pump_continuous(ml_per_min, p_ctx);
 
-  //turn off cont pumping regardless of which mode
-  p_ctx->hardware_states &= ~(PC_PUMP_CONTINUOUS);
+  ESP_ERROR_CHECK(store_sched(p_ctx->schedule));
 
-  //this is the handler for cont. pumping
-  if(data[0] == 'c'){
-    errno = 0;
-    float ml_per_min = strtof(&data[1], NULL);
-    ESP_LOGI("ADN_BLE", "cont. dosing %f ml/min", ml_per_min);
-    if(ml_per_min == EINVAL || ml_per_min < 1)
-      return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+  return 0;
+}
 
-    p_ctx->schedule->ml_per_dose = ml_per_min;
-    p_ctx->schedule->mode = CONTINUOUS;
-    pump_continuous(ml_per_min, p_ctx);
-
-    ESP_ERROR_CHECK(store_sched(p_ctx->schedule));
-
-    return 0;
-  }
-
-
-  //this is the handler for discrete pumping
+int discrete_pumping_handler(program_context *p_ctx, char* data){
   char *post_ptr = data;
   uint8_t i = 0;
   for(; data[i] != 0 && data[i] != ','; i++){} //finds the first comma in the string
@@ -96,6 +80,33 @@ int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
   ESP_ERROR_CHECK(store_sched(p_ctx->schedule));
 
   return 0;
+
+}
+
+int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
+  program_context *p_ctx = (program_context *)args;
+  char data[32];
+  float mls_per_dose = 0;
+  uint16_t period = 0;
+  uint16_t len = OS_MBUF_PKTLEN(ctx->om);
+
+  if(len > sizeof(data))
+    return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+
+  ble_hs_mbuf_to_flat(ctx->om, data, sizeof(data), NULL);
+  data[len] = 0;
+
+  //turn off cont pumping regardless of which mode
+  p_ctx->hardware_states &= ~(PC_PUMP_CONTINUOUS);
+
+  //this is the handler for cont. pumping
+  if(data[0] == 'c'){
+    return continuous_pumping_handler(p_ctx, data);
+  }
+
+  return discrete_pumping_handler(p_ctx, data);
+  //this is the handler for discrete pumping
+
 }
 
 int read_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
@@ -142,7 +153,7 @@ int device_information(uint16_t conn_handle, uint16_t attr_handle, struct ble_ga
     if (rc != 0) return BLE_ATT_ERR_UNLIKELY;
 
     time_t unix_time = (time_t)timestamp;
-    update_sys_time_from_long(unix_time);    
+    update_sys_time_from_long(unix_time);
     print_time();
     store_systime(NULL);
     return 0;
