@@ -99,13 +99,19 @@ int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
   //turn off cont pumping regardless of which mode
   p_ctx->hardware_states &= ~(PC_PUMP_CONTINUOUS);
 
-  //this is the handler for cont. pumping
-  if(data[0] == 'c'){
+  switch(data[0]){
+  case 'c':
     return continuous_pumping_handler(p_ctx, data);
+    break;
+  case 't':
+    break;
+  default:
+    return discrete_pumping_handler(p_ctx, data);
+    break;
+
   }
 
-  return discrete_pumping_handler(p_ctx, data);
-  //this is the handler for discrete pumping
+  return 0;
 
 }
 
