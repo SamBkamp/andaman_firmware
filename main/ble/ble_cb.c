@@ -83,6 +83,35 @@ int discrete_pumping_handler(program_context *p_ctx, char* data){
 
 }
 
+int timed_dosing_write(struct ble_gatt_access_ctxt *ctx, void *args){
+  program_context *p_ctx = (program_context *)args;
+  char data[32];
+  uint16_t len = OS_MBUF_PKTLEN(ctx->om);
+
+  if(len > sizeof(data))
+    return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+
+  ble_hs_mbuf_to_flat(ctx->om, data, sizeof(data), NULL);
+  data[len] = 0;
+
+  ESP_LOGI("ADN_STEPPER", "%s", data);
+  return 0;
+}
+
+int timed_dosing_read(struct ble_gatt_access_ctxt *ctx, void *args){
+  program_context *p_ctx = (program_context *)args;
+  char data[32];
+  int len;
+
+
+  data[0] = 0;
+  len = 1;
+
+
+  return os_mbuf_append(ctx->om, data, len) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+
+}
+
 int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
   program_context *p_ctx = (program_context *)args;
   char data[32];
@@ -102,8 +131,6 @@ int set_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
   switch(data[0]){
   case 'c':
     return continuous_pumping_handler(p_ctx, data);
-    break;
-  case 't':
     break;
   default:
     return discrete_pumping_handler(p_ctx, data);
@@ -246,6 +273,26 @@ int calibration_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_g
   return 0;
 }
 
+
+int timed_schedule_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void *args){
+
+  switch (ctx->op) {
+
+  case BLE_GATT_ACCESS_OP_READ_CHR:
+    return timed_dosing_read(ctx, args);
+    break;
+
+  case BLE_GATT_ACCESS_OP_WRITE_CHR:
+    return timed_dosing_write(ctx, args);
+    break;
+
+  default:
+    return BLE_ATT_ERR_UNLIKELY;
+  }
+
+  return 0;
+
+}
 
 
 int schedule_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void *args){

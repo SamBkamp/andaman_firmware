@@ -44,6 +44,11 @@ static struct ble_gatt_chr_def characteristics[] = {
     .access_cb = schedule_handler,
   },
   {
+    .uuid = &timed_schedule_characteristic_uuid.u,
+    .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_READ,
+    .access_cb = timed_schedule_handler,
+  },
+  {
     .uuid = &device_info_uuid.u,
     .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE,
     .access_cb = device_information,
