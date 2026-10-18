@@ -83,30 +83,62 @@ int discrete_pumping_handler(program_context *p_ctx, char* data){
 
 }
 
+
+/*
+  byte 0 = hour
+  byte 1 = minute
+  byte 2-3 = amount * 100
+
+ */
 int timed_dosing_write(struct ble_gatt_access_ctxt *ctx, void *args){
   program_context *p_ctx = (program_context *)args;
-  char data[32];
+  uint8_t data[32];
   uint16_t len = OS_MBUF_PKTLEN(ctx->om);
+  uint8_t entry_end_idx = 6;
 
-  if(len > sizeof(data))
+  //valid packets are always a multiple of 4 bytes
+  //as each entry is 4 bytes exactly
+  if(len > sizeof(data) || len % 4 != 0)
     return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
 
   ble_hs_mbuf_to_flat(ctx->om, data, sizeof(data), NULL);
-  data[len] = 0;
 
-  ESP_LOGI("ADN_STEPPER", "%s", data);
+  p_ctx->schedule->timed.count = 0; //reset array, whole sched gets tx every time
+
+  for(uint8_t i = 0; i < len; i+=4){
+    uint16_t amount_mult = *((uint16_t *)&data[2+i]);
+    ESP_LOGI("ADN_BLE", "%2d:%2d  %d", data[0+i], data[1+i], amount_mult);
+    p_ctx->schedule->timed.times[p_ctx->schedule->timed.count++] = (dose_time_data_t){
+      .hour = data[0+i],
+      .minute = data[1+i],
+      .ml = ((float)amount_mult/100)
+    };
+    ESP_LOGI("ADN_BLE", "amount mult: %d", amount_mult);
+    ESP_LOGI("ADN_BLE", "as stored: %f", ((float)amount_mult/100));
+  }
+
+  ESP_ERROR_CHECK(store_sched(p_ctx->schedule));
+  p_ctx->schedule->mode = TIME;
   return 0;
 }
 
 int timed_dosing_read(struct ble_gatt_access_ctxt *ctx, void *args){
   program_context *p_ctx = (program_context *)args;
-  char data[32];
-  int len;
+  char data[64];
+  int len = 0;
 
+  for(uint8_t i = 0; i < p_ctx->schedule->timed.count; i++){
+    uint16_t amount_mult = (uint16_t)(p_ctx->schedule->timed.times[i].ml*100);
+    ESP_LOGI("ADN_BLE", "amount mult: %d", amount_mult);
+    ESP_LOGI("ADN_BLE", "as stored: %f", p_ctx->schedule->timed.times[i].ml);
+    data[0+(i*4)] = p_ctx->schedule->timed.times[i].hour;
+    data[1+(i*4)] = p_ctx->schedule->timed.times[i].minute;
+    data[2+(i*4)] = amount_mult<<8;
+    data[3+(i*4)] = amount_mult&0xFF;
+    len+=4;
+  }
 
-  data[0] = 0;
-  len = 1;
-
+  ESP_LOGI("ADN-BLE", "total entries: %d", (uint8_t)len/4);
 
   return os_mbuf_append(ctx->om, data, len) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 
@@ -150,7 +182,7 @@ int read_schedule(struct ble_gatt_access_ctxt *ctx, void* args){
   if(p_ctx->schedule->mode == INTERVAL)
     len = snprintf(data, 32, "%.2f,%ld", p_ctx->schedule->ml_per_dose, p_ctx->schedule->period_s);
   else
-    len = snprintf(data, 32, "c%.2f", p_ctx->schedule->ml_per_dose);
+    len = snprintf(data, 32, "t%.2f,%ld", p_ctx->schedule->ml_per_dose, p_ctx->schedule->period_s);
 
   return os_mbuf_append(ctx->om, data, len) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 }
