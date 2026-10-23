@@ -73,6 +73,12 @@ static struct ble_gatt_chr_def characteristics[] = {
     .flags = BLE_GATT_CHR_F_WRITE,
     .access_cb = auto_cal_handler,
   },
+  {
+    .uuid = &ota_uuid.u,
+    .flags = BLE_GATT_CHR_F_WRITE,
+    .access_cb = ota_handler,
+  },
+  
   {0}
 };
 

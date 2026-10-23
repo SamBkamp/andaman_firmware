@@ -72,6 +72,7 @@ void app_main(void){
 
 
   gpio_set_level(PIN_LED_GEN, 1);
+  gpio_set_level(PIN_LED_ERROR, 1);
   ESP_ERROR_CHECK(temperature_sensor_install(&temp_sensor_config, &temp_handle));
   ESP_ERROR_CHECK(temperature_sensor_enable(temp_handle));
 
@@ -89,8 +90,6 @@ void app_main(void){
 
   print_time();
   ESP_LOGI(TAG, "Device name: %s", ctx.BLE_device_name);
-  //sched.timed.times[sched.timed.count++] = d_time;
-  //sched.mode = TIME;
 
   ctx.hardware_states &= ~(PC_PUMP_ACTIVE); //turn off active on restart
   //the pump can't be active but it may have been stored that way if pump lost power while pumping

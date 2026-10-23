@@ -13,6 +13,7 @@
 #include "nvs_flash.h"
 #include "nvs/nvs_driver.h"
 #include "stepper/step_util.h"
+#include "OTA/ota_driver.h"
 #include "generic_util.h"
 
 #include "driver/gpio.h"
@@ -27,8 +28,9 @@
 #define BLE_DEV_NAME "ADN-DOSER"
 #define BLE_ADV_INTVL 0.625
 
-static const version SOFTWARE_VERSION = {.v = {1,0,3}};
-static const version BOARD_VERSION = {.v = {0,0,1}};
+static const version SOFTWARE_VERSION = {.v = {1,1,3}};
+static const version BOARD_VERSION = {.v = {0,1,2}};
+static const version BATCH_NUMBER = {.v = {0,0,1}};
 
 
 int continuous_pumping_handler(program_context *p_ctx, char *data){
@@ -202,7 +204,11 @@ int device_information(uint16_t conn_handle, uint16_t attr_handle, struct ble_ga
     data[3] = BOARD_VERSION.v[0];
     data[4] = BOARD_VERSION.v[1];
     data[5] = BOARD_VERSION.v[2];
-    return os_mbuf_append(ctx->om, data, sizeof(version)*2) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+    data[6] = BATCH_NUMBER.v[0];
+    data[7] = BATCH_NUMBER.v[1];
+    data[8] = BATCH_NUMBER.v[2];
+
+    return os_mbuf_append(ctx->om, data, sizeof(version)*3) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
     break;
 
     //SET SYS TIME
@@ -458,4 +464,56 @@ int auto_cal_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt
   ESP_ERROR_CHECK(store_sched(p_ctx->schedule));
 
   return 0;
+}
+
+
+
+int write_ota_command(struct ble_gatt_access_ctxt *ctx, void* args){
+  program_context *p_ctx = (program_context *)args;
+  uint16_t len = OS_MBUF_PKTLEN(ctx->om);
+  uint8_t packet[OTA_PACKET_MAX];
+  uint32_t offset; //either image size for start, or data length for write chunk
+  if (len == 0 || len > OTA_PACKET_MAX)
+    return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+
+  int rc = os_mbuf_copydata(ctx->om, 0, len, packet);
+
+  if (rc != 0)
+    return BLE_ATT_ERR_UNLIKELY;
+
+  switch(packet[0]){
+  case OTA_CMD_START:
+    if(len != 5)
+      return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+    memcpy(&offset, &packet[1], sizeof(offset));
+    ota_start(offset);
+    break;
+  case OTA_CMD_DATA:
+    memcpy(&offset, &packet[1], sizeof(offset));
+    ota_write_chunk(offset, &packet[5], len - 5);
+    break;
+  case OTA_CMD_FINISH:
+    ota_finish();
+    break;
+  case OTA_CMD_ABORT:
+    break;
+  default:
+    return BLE_ATT_ERR_UNLIKELY;
+    break;
+  }
+  return 0;
+}
+
+
+int ota_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void *args){
+
+  switch (ctx->op) {
+  case BLE_GATT_ACCESS_OP_WRITE_CHR:
+    return write_ota_command(ctx, args);
+    break;
+  default:
+    return BLE_ATT_ERR_UNLIKELY;
+    break;
+  }
+
 }

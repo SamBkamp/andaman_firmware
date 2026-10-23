@@ -40,6 +40,9 @@ static const ble_uuid128_t new_devname_uuid = \
 static const ble_uuid128_t auto_cal_uuid = \
   BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52, 0x10,0x51, 0xa9,0x2f,0xb1,0x68,0x76,0x8b);
 
+static const ble_uuid128_t ota_uuid = \
+  BLE_UUID128_INIT(0x96,0xe8,0x1e,0x1d,0xA5,0x1A,0x08,0x52, 0x01,0xA5, 0xa9,0x2f,0xb1,0x68,0x76,0x8b);
+
 
 int schedule_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
 int manual_dose(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
@@ -49,6 +52,6 @@ int calibration_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_g
 int new_ble_dev_name(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
 int auto_cal_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void* args);
 int timed_schedule_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void *args);
-
+int ota_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void *args);
 
 #endif
