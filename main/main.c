@@ -82,13 +82,14 @@ void app_main(void){
   /*   ESP_ERROR_CHECK(nvs_flash_erase()); */
 
   //load initialisation data from NVS
+  load_or_default(load_tz, store_tz, &ctx.tz, "UTC-8");
   load_or_default(load_schedule, store_sched, &sched, &sched);
   load_or_default(load_step_calibration, store_step_calibration, &pump_step_data.steps_per_ml, &pump_step_data.steps_per_ml);
   load_or_default(load_hardware_state, store_hardware_state, &ctx.hardware_states, &ctx.hardware_states);
   load_or_default(load_device_name, store_device_name, &ctx.BLE_device_name, &ctx.BLE_device_name);
   load_or_default(load_systime, store_systime, NULL, NULL);
 
-  print_time();
+  print_time(&ctx);
   ESP_LOGI(TAG, "Device name: %s", ctx.BLE_device_name);
 
   ctx.hardware_states &= ~(PC_PUMP_ACTIVE); //turn off active on restart

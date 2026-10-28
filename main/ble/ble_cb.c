@@ -225,7 +225,7 @@ int device_information(uint16_t conn_handle, uint16_t attr_handle, struct ble_ga
 
     time_t unix_time = (time_t)timestamp;
     update_sys_time_from_long(unix_time);
-    print_time();
+    print_time(p_ctx);
     store_systime(NULL);
     return 0;
     break;
@@ -311,6 +311,26 @@ int calibration_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_g
   return 0;
 }
 
+
+int timezone_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void *args){
+
+  program_context *p_ctx = (program_context *)args;
+  uint16_t len = OS_MBUF_PKTLEN(ctx->om);
+  char temp[10];
+
+  if(len != 6 && len != 5) return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+
+  ble_hs_mbuf_to_flat(ctx->om, temp, sizeof(temp), NULL);
+  temp[len] = 0;
+
+  //ESP_LOGI("ADN-BLE", "timezone recieved: %s", temp);
+  strcpy(p_ctx->tz, temp);
+
+  store_tz(p_ctx->tz);
+  print_time(p_ctx);
+  return 0;
+
+}
 
 int timed_schedule_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctx, void *args){
 

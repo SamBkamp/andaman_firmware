@@ -88,6 +88,7 @@ typedef struct{
   step_struct *pump_step_data;
   char BLE_device_name[BLE_MAX_DEVNAME_LEN];
   double total_amount_dosed;
+  char tz[7];
 }program_context;
 
 uint8_t wake_driver();

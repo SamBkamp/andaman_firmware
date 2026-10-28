@@ -36,17 +36,18 @@ bool update_sys_time_from_long(time_t unix_time){
 }
 
 
-void print_time(void){
+void print_time(program_context *p_ctx){
   time_t now;
   char strftime_buf[64];
   struct tm timeinfo;
 
   time(&now);
-  setenv("TZ", "UTC-8", 1); //unix is fucking weird about timezones
+  setenv("TZ", p_ctx->tz, 1); //unix is fucking weird about timezones
   tzset();
   localtime_r(&now, &timeinfo);
   strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-  ESP_LOGI(TAG, "The current date/time in Hong Kong is: %s", strftime_buf);
+  ESP_LOGI(TAG, "The current date/time is: %s", strftime_buf);
+  ESP_LOGI(TAG, "timezone: %s", p_ctx->tz);
 
 }
 

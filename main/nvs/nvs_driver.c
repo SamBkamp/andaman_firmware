@@ -13,6 +13,7 @@
 #define NVS_KEY_DEVNAME "device_name"
 #define NVS_KEY_TOTAL_DOSED "total_dosed"
 #define NVS_KEY_SYSTIME "sys_time"
+#define NVS_KEY_TZ "time_zone"
 
 esp_err_t store_sched(void *schedule){
   doser_schedule *sched = (doser_schedule *)schedule;
@@ -81,6 +82,49 @@ esp_err_t store_step_calibration(void *steps){
   return err;
 }
 
+
+esp_err_t store_tz(void *tz_string){
+  char *tz = (char *)tz_string;
+  nvs_handle_t handle;
+  esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
+
+  ESP_LOGI("ADN_NVS", "Saving tz: %s", tz);
+
+  if(err != ESP_OK)
+    return err;
+
+  err = nvs_set_blob(handle, NVS_KEY_TZ, tz, 7); //timezone string is always max 7 bytes
+  if(err == ESP_OK)
+    err = nvs_commit(handle);
+
+  nvs_close(handle);
+
+  return err;
+}
+
+esp_err_t load_tz(void *tz_string){
+  nvs_handle_t handle;
+  size_t size = 7;
+
+  esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &handle);
+
+  if (err != ESP_OK)
+    return err;
+
+  err = nvs_get_blob(handle, NVS_KEY_TZ, tz_string, &size);
+  nvs_close(handle);
+
+  if (err != ESP_OK)
+    return err;
+
+  ESP_LOGI("ADN_NVS", "Loaded timezone: %s", tz_string);
+
+  setenv("TZ", tz_string, 1); //unix is fucking weird about timezones
+  tzset();
+
+  return err;
+}
+
 esp_err_t store_systime(void *ignore){
   time_t now = time(NULL);
   nvs_handle_t handle;
@@ -99,6 +143,8 @@ esp_err_t store_systime(void *ignore){
 
   return err;
 }
+
+
 
 esp_err_t load_systime(void *ignore){
   time_t ret_time;
