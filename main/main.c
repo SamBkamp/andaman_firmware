@@ -114,6 +114,7 @@ void app_main(void){
 
   while(true){
     if (temperature_sensor_get_celsius(temp_handle, &temp) == ESP_OK) {
+      if(temp > 55) gpio_set_level(PIN_LOWI_MODE, 1);
       //ESP_LOGI("TEMP", "ESP32 temperature: %.2f C", temp);
       //printf("%.2f C\n", temp);
       //fflush(stdout);
